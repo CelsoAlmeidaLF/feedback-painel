@@ -124,8 +124,13 @@ function renderApps(r) {
     const card = el('article', 'app-card' + (a.total ? '' : ' vazio'));
     const h = el('h3', '', C.nomeApp(id));
     h.append(el('span', 'num', `${a.total} ${a.total === 1 ? 'avaliação' : 'avaliações'}`));
+    if (!a.total) {
+      card.append(h, el('div', 'row-meta', 'Sem avaliações ainda'));
+      box.append(card);
+      continue;
+    }
     const m = el('div', 'app-media');
-    m.append(el('b', '', a.total ? C.media(a.media) : '–'), estrelas(a.media));
+    m.append(el('b', '', C.media(a.media)), estrelas(a.media));
     const dist = el('div', 'dist');
     for (let n = 5; n >= 1; n--) {
       const qtd = a.dist[n - 1];

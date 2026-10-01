@@ -17,8 +17,11 @@
   const nomeApp = (id) => APPS[id] || id;
   const nomeTipo = (t) => TIPOS[t] || t;
 
-  // Média, total e distribuição 1–5 por app, mais o geral. Apps sem avaliação também aparecem.
-  function resumo(avaliacoes, apps = Object.keys(APPS)) {
+  // Os 4 apps no ar sempre aparecem (mesmo sem avaliação); os demais só quando tiverem avaliação.
+  const PRINCIPAIS = ['CAMBIO', 'CRIPTO', 'LIVROCAIXA', 'TAXOMETRO'];
+
+  // Média, total e distribuição 1–5 por app, mais o geral.
+  function resumo(avaliacoes, apps = PRINCIPAIS) {
     const vazio = () => ({ total: 0, soma: 0, media: 0, dist: [0, 0, 0, 0, 0] });
     const porApp = {};
     apps.forEach((a) => { porApp[a] = vazio(); });
@@ -88,7 +91,7 @@
     return `mailto:${encodeURIComponent(s.email).replace(/%40/g, '@')}?subject=${encodeURIComponent(assunto)}`;
   }
 
-  const api = { APPS, TIPOS, nomeApp, nomeTipo, resumo, filtrar, csv, celula, dataHora, relativo, media, emailValido, linkResposta };
+  const api = { APPS, PRINCIPAIS, TIPOS, nomeApp, nomeTipo, resumo, filtrar, csv, celula, dataHora, relativo, media, emailValido, linkResposta };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PainelCore = api;
 })(typeof self !== 'undefined' ? self : this);
