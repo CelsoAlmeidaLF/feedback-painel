@@ -11,7 +11,10 @@ a { color: var(--accent); }
 #telaPainel > .msg { margin: 0 0 10px; }
 
 .topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.topo .lede { word-break: break-all; }
+.topo .lede { overflow-wrap: anywhere; }
+#atualizado { white-space: nowrap; }
+#totais { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 520px) { #totais { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Avaliações por app */
 .apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
@@ -25,7 +28,8 @@ a { color: var(--accent); }
 .dist { display: grid; grid-template-columns: 16px 1fr 28px; gap: 4px 8px; align-items: center; font: 11px var(--mono); color: var(--ink-dim); }
 .dist .progress { height: 6px; }
 .dist .num { text-align: right; }
-.app-card.vazio .app-media b { color: var(--ink-dim); }
+.app-card.vazio { padding: 12px 16px; }
+.app-card.vazio h3 { margin: 0 0 2px; }
 
 /* Filtros */
 .filtros { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }

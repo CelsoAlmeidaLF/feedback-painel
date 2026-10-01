@@ -13,7 +13,8 @@ test('resumo: média, total e distribuição por app e geral', () => {
   assert.equal(r.porApp.CAMBIO.media, 4);
   assert.deepEqual(r.porApp.CAMBIO.dist, [0, 0, 1, 1, 1]);
   assert.equal(r.porApp.TAXOMETRO.media, 1);
-  assert.equal(r.porApp.CRIPTO.total, 0, 'app sem avaliação aparece zerado');
+  assert.equal(r.porApp.CRIPTO.total, 0, 'app principal sem avaliação aparece zerado');
+  assert.equal(r.porApp.DESPESAS, undefined, 'app fora dos principais só aparece com avaliação');
   assert.equal(r.geral.total, 4);
   assert.equal(r.geral.media, 13 / 4);
 });
