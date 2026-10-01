@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-version="1.0.0">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://firestore.googleapis.com https://content-firebaseappcheck.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com; frame-src https://www.google.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0E1210">
+<title>Feedback dos apps</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="financ-ui.css">
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+<main class="page painel" id="app">
+
+  <!-- ENTRAR -->
+  <section id="telaEntrar" hidden>
+    <div class="eyebrow">FEEDBACK DOS APPS</div>
+    <h1>Painel</h1>
+    <p class="lede">Avaliações e sugestões enviadas pelo painel Apoiar dos apps.</p>
+    <form class="card stack" id="formEntrar" novalidate>
+      <label class="field">E-mail
+        <input class="input" type="email" id="email" autocomplete="username" required>
+      </label>
+      <label class="field">Senha
+        <input class="input" type="password" id="senha" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-primary btn-block" type="submit" id="btnEntrar">Entrar</button>
+      <button class="btn btn-ghost btn-block" type="button" id="btnEsqueci">Esqueci a senha</button>
+      <div class="msg" id="msgEntrar" role="status" aria-live="polite"></div>
+    </form>
+  </section>
+
+  <!-- PAINEL -->
+  <section id="telaPainel" hidden>
+    <header class="topo">
+      <div>
+        <div class="eyebrow">FEEDBACK DOS APPS</div>
+        <h1>Painel</h1>
+        <p class="lede"><span id="quem"></span> · <span id="atualizado">conectando…</span></p>
+      </div>
+      <button class="btn btn-secondary btn-sm" type="button" id="btnSair">Sair</button>
+    </header>
+
+    <div class="stat-grid" id="totais">
+      <div class="stat"><div class="k">Média geral</div><div class="v" id="tMedia">–</div></div>
+      <div class="stat"><div class="k">Avaliações</div><div class="v" id="tAval">–</div></div>
+      <div class="stat"><div class="k">Sugestões</div><div class="v" id="tSug">–</div></div>
+      <div class="stat pos"><div class="k">Novas</div><div class="v" id="tNovas">–</div></div>
+    </div>
+
+    <h2 class="section-title">Avaliações por app</h2>
+    <div class="apps" id="listaApps"></div>
+
+    <h2 class="section-title">Sugestões
+      <button class="btn btn-ghost btn-sm" type="button" id="btnCsv" title="Exportar a lista filtrada">Exportar CSV</button>
+    </h2>
+    <div class="filtros">
+      <div class="seg seg-sm" id="fStatus" role="group" aria-label="Status">
+        <button type="button" data-v="novas" aria-pressed="true">Novas</button>
+        <button type="button" data-v="todas" aria-pressed="false">Todas</button>
+        <button type="button" data-v="lidas" aria-pressed="false">Lidas</button>
+      </div>
+      <div class="seg seg-sm" id="fTipo" role="group" aria-label="Tipo">
+        <button type="button" data-v="" aria-pressed="true">Todos</button>
+        <button type="button" data-v="sugestao" aria-pressed="false">Sugestão</button>
+        <button type="button" data-v="problema" aria-pressed="false">Problema</button>
+        <button type="button" data-v="elogio" aria-pressed="false">Elogio</button>
+      </div>
+      <div class="filtros-linha">
+        <select class="select" id="fApp" aria-label="App"><option value="">Todos os apps</option></select>
+        <input class="input input-search" type="search" id="fBusca" placeholder="Buscar no texto ou e-mail" aria-label="Buscar">
+      </div>
+    </div>
+    <div class="msg" id="msgPainel" role="status" aria-live="polite"></div>
+    <div id="listaSug" class="card lista"></div>
+    <p class="note">Protegido por reCAPTCHA. Valem a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidade</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Termos</a> do Google.</p>
+  </section>
+
+  <noscript><p class="lede">Ative o JavaScript para usar o painel.</p></noscript>
+</main>
+<script src="financ-icons.js"></script>
+<script src="painel-core.js"></script>
+<script src="app.js" type="module"></script>
+</body>
+</html>
