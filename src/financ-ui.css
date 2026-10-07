@@ -1,6 +1,6 @@
 /* FINANC UI v1.0 — tokens e componentes extraídos de cambio-sim, cripito-sim, gerenc-fin e taxometro.
    Uso: <link rel="stylesheet" href="financ-ui.css"> + fontes Space Grotesk / IBM Plex Mono.
-   Ícones: financ-icons.js. Segurança (PIN): secure-vault.js + secure-ui.js + secure-ui.css (pasta .security). */
+   Ícones: stk-pkg-financ-icons.js. Segurança (PIN): stk-pkg-secure-vault.js + stk-pkg-secure-ui.js + stk-pkg-secure-ui.css (pasta stk-pkg-security). */
 
 /* ───────── Tokens ───────── */
 :root {

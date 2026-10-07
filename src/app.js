@@ -46,25 +46,31 @@ const ERROS_LOGIN = {
   'auth/network-request-failed': 'Sem conexão. Tente de novo.',
   'auth/user-disabled': 'Esta conta foi desativada.',
 };
-$('formEntrar').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const b = $('btnEntrar');
-  b.disabled = true; msg($('msgEntrar'), 'Entrando…');
-  try {
-    await signInWithEmailAndPassword(auth, $('email').value.trim(), $('senha').value);
-    $('senha').value = '';
-    msg($('msgEntrar'), '');
-  } catch (err) {
-    msg($('msgEntrar'), ERROS_LOGIN[err.code] || 'Não foi possível entrar. Tente de novo.', 'err');
-  } finally { b.disabled = false; }
-});
-$('btnEsqueci').addEventListener('click', async () => {
-  const email = $('email').value.trim();
-  if (!C.emailValido(email)) { msg($('msgEntrar'), 'Digite seu e-mail acima e toque de novo em "Esqueci a senha".', 'err'); $('email').focus(); return; }
-  try { await sendPasswordResetEmail(auth, email); } catch (_) { /* não revela se a conta existe */ }
-  msg($('msgEntrar'), 'Se o e-mail tiver conta, o link para criar uma nova senha chega em alguns minutos (veja também o spam).', 'ok');
-});
-$('btnSair').addEventListener('click', () => signOut(auth));
+const UiEvents = {
+  formEntrar_submit: async (e) => {
+    e.preventDefault();
+    const b = $('btnEntrar');
+    b.disabled = true; msg($('msgEntrar'), 'Entrando…');
+    try {
+      await signInWithEmailAndPassword(auth, $('email').value.trim(), $('senha').value);
+      $('senha').value = '';
+      msg($('msgEntrar'), '');
+    } catch (err) {
+      msg($('msgEntrar'), ERROS_LOGIN[err.code] || 'Não foi possível entrar. Tente de novo.', 'err');
+    } finally { b.disabled = false; }
+  },
+  btnEsqueci_click: async () => {
+    const email = $('email').value.trim();
+    if (!C.emailValido(email)) { msg($('msgEntrar'), 'Digite seu e-mail acima e toque de novo em "Esqueci a senha".', 'err'); $('email').focus(); return; }
+    try { await sendPasswordResetEmail(auth, email); } catch (_) { /* não revela se a conta existe */ }
+    msg($('msgEntrar'), 'Se o e-mail tiver conta, o link para criar uma nova senha chega em alguns minutos (veja também o spam).', 'ok');
+  },
+  btnSair_click: () => signOut(auth)
+};
+
+$('formEntrar').addEventListener('submit', UiEvents.formEntrar_submit);
+$('btnEsqueci').addEventListener('click', UiEvents.btnEsqueci_click);
+$('btnSair').addEventListener('click', UiEvents.btnSair_click);
 
 // ───────── Dados ao vivo ─────────
 let avaliacoes = [], sugestoes = [], pararAval = null, pararSug = null;
@@ -225,15 +231,20 @@ function ligarSeg(id, chave) {
 }
 ligarSeg('fStatus', 'status');
 ligarSeg('fTipo', 'tipo');
-$('fApp').addEventListener('change', (e) => { filtro.app = e.target.value; renderSugestoes(); });
 let tBusca;
-$('fBusca').addEventListener('input', (e) => { clearTimeout(tBusca); tBusca = setTimeout(() => { filtro.busca = e.target.value; renderSugestoes(); }, 200); });
+const UiEventsFiltro = {
+  fApp_change: (e) => { filtro.app = e.target.value; renderSugestoes(); },
+  fBusca_input: (e) => { clearTimeout(tBusca); tBusca = setTimeout(() => { filtro.busca = e.target.value; renderSugestoes(); }, 200); },
+  btnCsv_click: () => {
+    const lista = C.filtrar(sugestoes, filtro);
+    const url = URL.createObjectURL(new Blob([C.csv(lista)], { type: 'text/csv;charset=utf-8' }));
+    const a = el('a');
+    a.href = url; a.download = `feedback-sugestoes-${C.dataHora(new Date()).slice(0, 10).split('/').reverse().join('-')}.csv`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+};
 
-$('btnCsv').addEventListener('click', () => {
-  const lista = C.filtrar(sugestoes, filtro);
-  const url = URL.createObjectURL(new Blob([C.csv(lista)], { type: 'text/csv;charset=utf-8' }));
-  const a = el('a');
-  a.href = url; a.download = `feedback-sugestoes-${C.dataHora(new Date()).slice(0, 10).split('/').reverse().join('-')}.csv`;
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
+$('fApp').addEventListener('change', UiEventsFiltro.fApp_change);
+$('fBusca').addEventListener('input', UiEventsFiltro.fBusca_input);
+$('btnCsv').addEventListener('click', UiEventsFiltro.btnCsv_click);

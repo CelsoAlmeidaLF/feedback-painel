@@ -2,7 +2,7 @@
 
 Página para o dono dos apps ler as **avaliações** (estrelas) e **sugestões** enviadas pelo painel Apoiar · Avaliar · Sugerir de Câmbio, Cripto, Livro-Caixa e Taxômetro.
 
-- Dados: Firestore do projeto `systekna-feedback` (regras em `FINANC/doação/firestore.rules`).
+- Dados: Firestore do projeto `systekna-feedback` (regras em `FINANC/stk-pkg-doacao/firestore.rules`).
 - Login por e-mail e senha (Firebase Auth). Só a conta cujo UID está na função `dono()` das regras lê, marca como lida e apaga sugestões.
 - App Check com reCAPTCHA Enterprise (a mesma chave dos apps; domínio precisa estar na chave).
 - Ao vivo (`onSnapshot`): mensagem nova aparece sem recarregar.
