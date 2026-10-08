@@ -1,4 +1,4 @@
-/* Painel de feedback — lê avaliações e sugestões do Firestore (projeto systekna-feedback).
+/* Painel de feedback — lê avaliações, sugestões e relatórios de erro do Firestore (projeto systekna-feedback).
    Login por e-mail e senha; só a conta dona (UID nas regras) lê, marca como lida e apaga sugestões.
    Texto vindo dos usuários é sempre inserido com textContent, nunca como HTML. */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -8,7 +8,7 @@ import {
   signInWithEmailAndPassword, sendPasswordResetEmail, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc,
+  getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const C = window.PainelCore;
@@ -73,15 +73,15 @@ $('btnEsqueci').addEventListener('click', UiEvents.btnEsqueci_click);
 $('btnSair').addEventListener('click', UiEvents.btnSair_click);
 
 // ───────── Dados ao vivo ─────────
-let avaliacoes = [], sugestoes = [], pararAval = null, pararSug = null;
+let avaliacoes = [], sugestoes = [], erros = [], pararAval = null, pararSug = null, pararErros = null;
 const filtro = { status: 'novas', tipo: '', app: '', busca: '' };
 
 onAuthStateChanged(auth, (user) => {
   $('telaEntrar').hidden = !!user;
   $('telaPainel').hidden = !user;
-  if (pararAval) pararAval(); if (pararSug) pararSug();
-  pararAval = pararSug = null;
-  avaliacoes = []; sugestoes = [];
+  if (pararAval) pararAval(); if (pararSug) pararSug(); if (pararErros) pararErros();
+  pararAval = pararSug = pararErros = null;
+  avaliacoes = []; sugestoes = []; erros = [];
   if (!user) { $('email').focus(); return; }
   $('quem').textContent = user.email;
   msg($('msgPainel'), '');
@@ -92,6 +92,11 @@ onAuthStateChanged(auth, (user) => {
   pararSug = onSnapshot(query(collection(db, 'sugestoes'), orderBy('criadoEm', 'desc')),
     (snap) => { sugestoes = snap.docs.map(doc2); render(); },
     (err) => falha(err));
+  pararErros = onSnapshot(query(collection(db, 'erros'), orderBy('criadoEm', 'desc')),
+    (snap) => { erros = snap.docs.map(doc2); renderErros(); },
+    (err) => msg($('msgErros'), err && err.code === 'permission-denied'
+      ? 'Sem acesso aos erros. Publique as regras do Firestore com a coleção "erros".'
+      : 'Não foi possível carregar os erros. Verifique a conexão e recarregue a página.', 'err'));
 });
 function falha(err) {
   const semAcesso = err && err.code === 'permission-denied';
@@ -248,3 +253,118 @@ const UiEventsFiltro = {
 $('fApp').addEventListener('change', UiEventsFiltro.fApp_change);
 $('fBusca').addEventListener('input', UiEventsFiltro.fBusca_input);
 $('btnCsv').addEventListener('click', UiEventsFiltro.btnCsv_click);
+
+// ───────── Visão: Feedback | Erros ─────────
+$('fVisao').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]'); if (!b) return;
+  $('fVisao').querySelectorAll('button').forEach((x) => { const on = x === b; x.setAttribute('aria-selected', String(on)); x.setAttribute('aria-pressed', String(on)); });
+  $('visaoFeedback').hidden = b.dataset.v !== 'feedback';
+  $('visaoErros').hidden = b.dataset.v !== 'erros';
+});
+
+// ───────── Erros ─────────
+const filtroErro = { status: 'abertos', app: '', versao: '' };
+const TIPO_ERRO = { erro: 'Erro', promessa: 'Promessa', console: 'Console' };
+
+function renderErros() {
+  const abertos = C.agruparErros(erros, { status: 'abertos' });
+  const semana = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  $('eAbertos').textContent = String(abertos.length);
+  $('eSemana').textContent = String(erros.filter((e) => e.criadoEm && e.criadoEm.getTime() >= semana).length);
+  $('eApps').textContent = String(new Set(abertos.map((g) => g.app)).size);
+  $('eUltimo').textContent = erros[0] && erros[0].criadoEm ? C.relativo(erros[0].criadoEm) : '–';
+  const badge = $('tErrosBadge');
+  badge.hidden = !abertos.length; badge.textContent = String(abertos.length);
+  preencher($('fErroApp'), 'Todos os apps', [...new Set(erros.map((e) => e.app))].map((id) => [id, C.nomeApp(id)]));
+  preencher($('fErroVersao'), 'Todas as versões', C.versoesErros(erros, filtroErro.app).map((v) => [v, 'v' + v]));
+  filtroErro.app = $('fErroApp').value; filtroErro.versao = $('fErroVersao').value;
+  renderListaErros();
+}
+
+function preencher(sel, rotulo, pares) {
+  const atual = sel.value;
+  sel.replaceChildren(new Option(rotulo, ''));
+  pares.forEach(([v, t]) => sel.append(new Option(t, v)));
+  sel.value = pares.some(([v]) => v === atual) ? atual : '';
+}
+
+function renderListaErros() {
+  const box = $('listaErros');
+  const grupos = C.agruparErros(erros, filtroErro);
+  box.replaceChildren();
+  if (!grupos.length) {
+    const vazio = el('div', 'empty-state');
+    vazio.innerHTML = icon('check', 28);
+    vazio.append(el('div', 'title', erros.length ? 'Nada com esses filtros' : 'Nenhum erro recebido'),
+      el('div', 'desc', erros.length ? 'Troque o status, o app ou a versão.' : 'Os relatórios dos testadores aparecem aqui na hora.'));
+    box.append(vazio);
+    return;
+  }
+  for (const g of grupos) box.append(itemErro(g));
+}
+
+function itemErro(g) {
+  const item = el('article', 'sug erro' + (g.resolvido ? ' lida' : ''));
+  const topo = el('div', 'sug-topo');
+  topo.append(el('span', 'ponto'), el('span', 'badge ' + (g.resolvido ? 'badge-neutral' : 'badge-neg'), g.resolvido ? 'Resolvido' : `${g.vezes}×`),
+    el('span', 'badge badge-neutral', `${C.nomeApp(g.app)} v${g.versao || '?'}`), el('span', 'badge badge-info', TIPO_ERRO[g.tipo] || g.tipo || 'Erro'));
+  const quando = el('span', 'row-meta', C.relativo(g.ultimo));
+  quando.title = `Primeiro: ${C.dataHora(g.primeiro)} · Último: ${C.dataHora(g.ultimo)}`;
+  topo.append(quando);
+  item.append(topo, el('p', 'sug-texto erro-msg', g.mensagem));
+  if (g.origem) item.append(el('div', 'sug-email', g.origem));
+  if (g.navegadores.length) item.append(el('div', 'sug-email', g.navegadores.join(' · ')));
+  if (g.pilha) {
+    const det = el('details', 'erro-pilha');
+    det.append(el('summary', '', 'Pilha'), el('pre', '', g.pilha));
+    item.append(det);
+  }
+  const acoes = el('div', 'row-actions');
+  const bRes = el('button', 'btn btn-secondary btn-sm', g.resolvido ? 'Reabrir' : 'Marcar como resolvido');
+  bRes.type = 'button';
+  bRes.addEventListener('click', () => acaoErro(bRes, () => emLote(g.ids, (b, ref) => b.update(ref, { resolvido: !g.resolvido }))));
+  const bCopiar = el('button', 'btn btn-ghost btn-sm', 'Copiar');
+  bCopiar.type = 'button';
+  bCopiar.addEventListener('click', async () => {
+    const txt = `${C.nomeApp(g.app)} v${g.versao} · ${g.vezes}× · ${g.tipo}\n${g.mensagem}\n${g.origem}\n${g.pilha}\n${g.navegadores.join(', ')}`;
+    try { await navigator.clipboard.writeText(txt); bCopiar.textContent = 'Copiado'; } catch (_) { bCopiar.textContent = 'Falhou'; }
+    setTimeout(() => { bCopiar.textContent = 'Copiar'; }, 2000);
+  });
+  const bApagar = el('button', 'btn btn-danger btn-sm', 'Excluir');
+  bApagar.type = 'button';
+  bApagar.addEventListener('click', () => {
+    if (!bApagar.classList.contains('confirmar')) {
+      bApagar.classList.add('confirmar'); bApagar.textContent = `Toque de novo para excluir (${g.vezes})`;
+      setTimeout(() => { bApagar.classList.remove('confirmar'); bApagar.textContent = 'Excluir'; }, 4000);
+      return;
+    }
+    acaoErro(bApagar, () => emLote(g.ids, (b, ref) => b.delete(ref)));
+  });
+  acoes.append(bRes, bCopiar, bApagar);
+  item.append(acoes);
+  return item;
+}
+
+// Firestore aceita até 500 operações por lote
+async function emLote(ids, op) {
+  for (let i = 0; i < ids.length; i += 450) {
+    const b = writeBatch(db);
+    ids.slice(i, i + 450).forEach((id) => op(b, doc(db, 'erros', id)));
+    await b.commit();
+  }
+}
+
+async function acaoErro(botao, fn) {
+  botao.disabled = true;
+  try { await fn(); msg($('msgErros'), ''); }
+  catch (err) { botao.disabled = false; msg($('msgErros'), 'Não foi possível concluir. Verifique a conexão.', 'err'); }
+}
+
+$('fErroStatus').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]'); if (!b) return;
+  $('fErroStatus').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  filtroErro.status = b.dataset.v;
+  renderListaErros();
+});
+$('fErroApp').addEventListener('change', (e) => { filtroErro.app = e.target.value; filtroErro.versao = ''; renderErros(); });
+$('fErroVersao').addEventListener('change', (e) => { filtroErro.versao = e.target.value; renderListaErros(); });

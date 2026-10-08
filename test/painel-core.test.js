@@ -79,3 +79,45 @@ test('linkResposta: só e-mail válido vira mailto, sem injeção de cabeçalho'
   assert.equal(C.linkResposta({ app: 'CAMBIO', email: 'javascript:alert(1)' }), '');
   assert.equal(C.linkResposta({ app: 'CAMBIO' }), '');
 });
+
+test('erros: agrupa pela assinatura, conta ocorrências e navegadores', () => {
+  const erros = [
+    { id: '1', assinatura: 'aaaa0001', app: 'CRIPTO', versao: '1.10.0', mensagem: 'x is not a function', navegador: 'Chrome 141 / Android', criadoEm: d('2026-10-08T10:00:00') },
+    { id: '2', assinatura: 'aaaa0001', app: 'CRIPTO', versao: '1.10.0', mensagem: 'x is not a function', navegador: 'Safari 18 / iOS', criadoEm: d('2026-10-08T12:00:00') },
+    { id: '3', assinatura: 'aaaa0001', app: 'CRIPTO', versao: '1.10.0', mensagem: 'x is not a function', navegador: 'Chrome 141 / Android', criadoEm: d('2026-10-07T09:00:00') },
+    { id: '4', assinatura: 'bbbb0002', app: 'CAMBIO', versao: '1.10.0', mensagem: 'falhou', criadoEm: d('2026-10-08T11:00:00'), resolvido: true },
+  ];
+  const g = C.agruparErros(erros, { status: 'todos' });
+  assert.equal(g.length, 2);
+  assert.equal(g[0].assinatura, 'aaaa0001', 'mais recente primeiro');
+  assert.equal(g[0].vezes, 3);
+  assert.deepEqual(g[0].ids, ['1', '2', '3']);
+  assert.deepEqual(g[0].navegadores, ['Chrome 141 / Android', 'Safari 18 / iOS']);
+  assert.equal(g[0].ultimo.getTime(), d('2026-10-08T12:00:00').getTime());
+  assert.equal(g[0].primeiro.getTime(), d('2026-10-07T09:00:00').getTime());
+  assert.equal(g[1].resolvido, true);
+});
+
+test('erros: filtros de status, app e versão', () => {
+  const erros = [
+    { id: '1', assinatura: 'a', app: 'CRIPTO', versao: '1.10.0', criadoEm: d('2026-10-08') },
+    { id: '2', assinatura: 'a', app: 'CRIPTO', versao: '1.10.0', criadoEm: d('2026-10-08'), resolvido: true },
+    { id: '3', assinatura: 'b', app: 'CRIPTO', versao: '1.9.1', criadoEm: d('2026-10-08'), resolvido: true },
+    { id: '4', assinatura: 'c', app: 'INVEST', versao: '1.0.0', criadoEm: d('2026-10-08') },
+  ];
+  assert.deepEqual(C.agruparErros(erros).map((g) => g.assinatura).sort(), ['a', 'c'], 'padrão: abertos (grupo com uma ocorrência aberta conta como aberto)');
+  assert.deepEqual(C.agruparErros(erros, { status: 'resolvidos' }).map((g) => g.assinatura), ['b']);
+  assert.deepEqual(C.agruparErros(erros, { status: 'todos', app: 'CRIPTO', versao: '1.9.1' }).map((g) => g.assinatura), ['b']);
+  assert.deepEqual(C.agruparErros([], {}), []);
+});
+
+test('erros: versões em ordem decrescente numérica', () => {
+  const erros = [{ app: 'CRIPTO', versao: '1.9.1' }, { app: 'CRIPTO', versao: '1.10.0' }, { app: 'CRIPTO', versao: '1.10.0' }, { app: 'CAMBIO', versao: '2.0.0' }, { app: 'CRIPTO', versao: '' }];
+  assert.deepEqual(C.versoesErros(erros), ['2.0.0', '1.10.0', '1.9.1']);
+  assert.deepEqual(C.versoesErros(erros, 'CRIPTO'), ['1.10.0', '1.9.1']);
+});
+
+test('apps: Investimentos tem nome e entra nos principais', () => {
+  assert.equal(C.nomeApp('INVEST'), 'Investimentos');
+  assert.ok(C.PRINCIPAIS.includes('INVEST'));
+});

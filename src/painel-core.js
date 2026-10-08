@@ -43,11 +43,12 @@
         CRIPTO: 'Cripto',
         LIVROCAIXA: 'Livro-Caixa',
         TAXOMETRO: 'Taxômetro',
+        INVEST: 'Investimentos',
         DESPESAS: 'Despesas da Casa',
         LAUNCHER: 'Meus Apps'
       };
       this._tipos = { sugestao: 'Sugestão', problema: 'Problema', elogio: 'Elogio' };
-      this._principais = ['CAMBIO', 'CRIPTO', 'LIVROCAIXA', 'TAXOMETRO'];
+      this._principais = ['CAMBIO', 'CRIPTO', 'LIVROCAIXA', 'TAXOMETRO', 'INVEST'];
     }
 
     get apps() { return this._apps; }
@@ -193,6 +194,44 @@
   }
 
   // ==========================================
+  // ERROS (relatórios técnicos do stk-pkg-erros.js)
+  // ==========================================
+  // Agrupa ocorrências pela assinatura (mesmo app + versão + mensagem + origem).
+  // Um grupo está resolvido quando todas as ocorrências estão marcadas.
+  function agruparErros(erros, filtros) {
+    const { status = 'abertos', app = '', versao = '' } = filtros || {};
+    const tempo = (d) => (d instanceof Date ? d.getTime() : 0);
+    const grupos = new Map();
+    for (const e of erros || []) {
+      const chave = e.assinatura || e.id;
+      let g = grupos.get(chave);
+      if (!g) {
+        g = { assinatura: chave, app: e.app, versao: e.versao || '', tipo: e.tipo, mensagem: e.mensagem || '', origem: e.origem || '',
+          pilha: e.pilha || '', ids: [], vezes: 0, navegadores: [], primeiro: e.criadoEm || null, ultimo: e.criadoEm || null, abertos: 0 };
+        grupos.set(chave, g);
+      }
+      g.ids.push(e.id); g.vezes++;
+      if (!e.resolvido) g.abertos++;
+      if (e.navegador && !g.navegadores.includes(e.navegador)) g.navegadores.push(e.navegador);
+      if (!g.pilha && e.pilha) g.pilha = e.pilha;
+      if (tempo(e.criadoEm) > tempo(g.ultimo)) g.ultimo = e.criadoEm;
+      if (e.criadoEm && (!g.primeiro || tempo(e.criadoEm) < tempo(g.primeiro))) g.primeiro = e.criadoEm;
+    }
+    return [...grupos.values()]
+      .map((g) => ({ ...g, resolvido: g.abertos === 0 }))
+      .filter((g) => (!app || g.app === app) && (!versao || g.versao === versao)
+        && (status === 'todos' || (status === 'abertos' ? !g.resolvido : g.resolvido)))
+      .sort((a, b) => tempo(b.ultimo) - tempo(a.ultimo));
+  }
+
+  // Versões presentes, da mais nova para a mais antiga (comparação numérica por partes)
+  function versoesErros(erros, app) {
+    const vs = [...new Set((erros || []).filter((e) => !app || e.app === app).map((e) => e.versao).filter(Boolean))];
+    const parte = (v) => v.split('.').map((n) => parseInt(n, 10) || 0);
+    return vs.sort((a, b) => { const x = parte(a), y = parte(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((y[i] || 0) !== (x[i] || 0)) return (y[i] || 0) - (x[i] || 0); } return 0; });
+  }
+
+  // ==========================================
   // ADAPTER EXPORT (Mantendo assinatura legada)
   // ==========================================
   const service = new FeedbackService();
@@ -219,6 +258,8 @@
     media: n => service.formatarMedia(n),
     emailValido: e => (new Suggestion({email: e})).isEmailValid(),
     linkResposta: s => service.gerarLinkResposta(s),
+    agruparErros,
+    versoesErros,
 
     CryptoAdapter,
     FeedbackService,
