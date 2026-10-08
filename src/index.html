@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-version="1.0.0">
+<html lang="pt-BR" data-version="1.2.0">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -19,7 +19,7 @@
   <section id="telaEntrar" hidden>
     <div class="eyebrow">FEEDBACK DOS APPS</div>
     <h1>Painel</h1>
-    <p class="lede">Avaliações e sugestões enviadas pelo painel Apoiar dos apps.</p>
+    <p class="lede">Avaliações, sugestões e relatórios de erro enviados pelos apps.</p>
     <form class="card stack" id="formEntrar" novalidate>
       <label class="field">E-mail
         <input class="input" type="email" id="email" autocomplete="username" required>
@@ -44,6 +44,12 @@
       <button class="btn btn-secondary btn-sm" type="button" id="btnSair">Sair</button>
     </header>
 
+    <div class="seg visao" id="fVisao" role="tablist" aria-label="Visão">
+      <button type="button" role="tab" data-v="feedback" aria-selected="true" aria-pressed="true">Feedback</button>
+      <button type="button" role="tab" data-v="erros" aria-selected="false" aria-pressed="false">Erros <span class="badge badge-neg" id="tErrosBadge" hidden></span></button>
+    </div>
+
+    <div id="visaoFeedback">
     <div class="stat-grid" id="totais">
       <div class="stat"><div class="k">Média geral</div><div class="v" id="tMedia">–</div></div>
       <div class="stat"><div class="k">Avaliações</div><div class="v" id="tAval">–</div></div>
@@ -76,12 +82,37 @@
     </div>
     <div class="msg" id="msgPainel" role="status" aria-live="polite"></div>
     <div id="listaSug" class="card lista"></div>
+    </div>
+
+    <div id="visaoErros" hidden>
+      <div class="stat-grid" id="totaisErros">
+        <div class="stat neg"><div class="k">Erros abertos</div><div class="v" id="eAbertos">–</div></div>
+        <div class="stat"><div class="k">Ocorrências (7 dias)</div><div class="v" id="eSemana">–</div></div>
+        <div class="stat"><div class="k">Apps afetados</div><div class="v" id="eApps">–</div></div>
+        <div class="stat"><div class="k">Último erro</div><div class="v" id="eUltimo">–</div></div>
+      </div>
+      <h2 class="section-title">Relatórios de erro</h2>
+      <p class="note">Enviados com permissão dos testadores (modo testador ou "Enviar relatório"). Só dados técnicos: mensagem limpa, arquivo e linha, versão e navegador.</p>
+      <div class="filtros">
+        <div class="seg seg-sm" id="fErroStatus" role="group" aria-label="Status do erro">
+          <button type="button" data-v="abertos" aria-pressed="true">Abertos</button>
+          <button type="button" data-v="todos" aria-pressed="false">Todos</button>
+          <button type="button" data-v="resolvidos" aria-pressed="false">Resolvidos</button>
+        </div>
+        <div class="filtros-linha">
+          <select class="select" id="fErroApp" aria-label="App"><option value="">Todos os apps</option></select>
+          <select class="select" id="fErroVersao" aria-label="Versão"><option value="">Todas as versões</option></select>
+        </div>
+      </div>
+      <div class="msg" id="msgErros" role="status" aria-live="polite"></div>
+      <div id="listaErros" class="card lista"></div>
+    </div>
     <p class="note">Protegido por reCAPTCHA. Valem a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidade</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Termos</a> do Google.</p>
   </section>
 
   <noscript><p class="lede">Ative o JavaScript para usar o painel.</p></noscript>
 </main>
-<script src="financ-icons.js"></script>
+<script src="stk-pkg-financ-icons.js"></script>
 <script src="painel-core.js"></script>
 <script src="app.js" type="module"></script>
 </body>

@@ -1,8 +1,9 @@
 # Painel de feedback
 
-Página para o dono dos apps ler as **avaliações** (estrelas) e **sugestões** enviadas pelo painel Apoiar · Avaliar · Sugerir de Câmbio, Cripto, Livro-Caixa e Taxômetro.
+Página para o dono dos apps ler as **avaliações** (estrelas), as **sugestões** e os **relatórios de erro** enviados por Câmbio, Cripto, Livro-Caixa, Taxômetro e Investimentos.
 
-- Dados: Firestore do projeto `systekna-feedback` (regras em `FINANC/doação/firestore.rules`).
+- Dados: Firestore do projeto `systekna-feedback` (regras em `PACOTES/stk-pkg-doacao/firestore.rules`).
+- Duas visões: **Feedback** (avaliações e sugestões) e **Erros** (relatórios do `stk-pkg-erros.js`, agrupados pelo mesmo erro, com contador, filtros por status, app e versão, pilha, copiar, marcar como resolvido e excluir).
 - Login por e-mail e senha (Firebase Auth). Só a conta cujo UID está na função `dono()` das regras lê, marca como lida e apaga sugestões.
 - App Check com reCAPTCHA Enterprise (a mesma chave dos apps; domínio precisa estar na chave).
 - Ao vivo (`onSnapshot`): mensagem nova aparece sem recarregar.
@@ -14,7 +15,7 @@ Página para o dono dos apps ler as **avaliações** (estrelas) e **sugestões**
 ```
 src/index.html      telas Entrar e Painel
 src/app.js          Firebase (Auth, App Check, Firestore) e interface
-src/painel-core.js  regras puras: resumo, filtros, CSV, datas (testadas)
+src/painel-core.js  regras puras: resumo, filtros, CSV, datas, agrupamento de erros (testadas)
 src/painel.css      complementos do design system (financ-ui.css)
 test/               node --test
 ```

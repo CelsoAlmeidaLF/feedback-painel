@@ -1,97 +1,270 @@
-/* painel-core.js — regras do painel de feedback, sem DOM nem Firebase (testável com node --test).
-   Avaliação: { id, app, nota (1–5), criadoEm: Date }
-   Sugestão:  { id, app, tipo, texto, email?, lida?, criadoEm: Date } */
-(function (root) {
+/**
+ * painel-core.js — regras do painel de feedback, sem DOM nem Firebase.
+ * Refatorado para Arquitetura Hexagonal, Orientação a Objetos e Criptografia.
+ */
+
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PainelCore = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APPS = {
-    CAMBIO: 'Câmbio',
-    CRIPTO: 'Cripto',
-    LIVROCAIXA: 'Livro-Caixa',
-    TAXOMETRO: 'Taxômetro',
-    DESPESAS: 'Despesas da Casa',
-    LAUNCHER: 'Meus Apps',
+  // ==========================================
+  // INFRASTRUCTURE LAYER
+  // ==========================================
+  class CryptoAdapter {
+    static async encryptData(plainText, key) {
+      const cryptoObj = typeof crypto !== 'undefined' ? crypto : (typeof globalThis !== 'undefined' ? globalThis.crypto : null);
+      if (!cryptoObj || !cryptoObj.subtle) throw new Error('Web Cryptography API não suportada');
+      const iv = cryptoObj.getRandomValues(new Uint8Array(12));
+      const encoded = new TextEncoder().encode(plainText);
+      const ciphertext = await cryptoObj.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, encoded);
+      return { iv: Array.from(iv), cipher: Array.from(new Uint8Array(ciphertext)) };
+    }
+
+    static async decryptData(encryptedObj, key) {
+      const cryptoObj = typeof crypto !== 'undefined' ? crypto : (typeof globalThis !== 'undefined' ? globalThis.crypto : null);
+      if (!cryptoObj || !cryptoObj.subtle) throw new Error('Web Cryptography API não suportada');
+      const iv = new Uint8Array(encryptedObj.iv);
+      const cipher = new Uint8Array(encryptedObj.cipher);
+      const decrypted = await cryptoObj.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, cipher);
+      return new TextDecoder().decode(decrypted);
+    }
+  }
+
+  // ==========================================
+  // DOMAIN LAYER (Entities & Value Objects)
+  // ==========================================
+  
+  class AppDictionary {
+    constructor() {
+      this._apps = {
+        CAMBIO: 'Câmbio',
+        CRIPTO: 'Cripto',
+        LIVROCAIXA: 'Livro-Caixa',
+        TAXOMETRO: 'Taxômetro',
+        INVEST: 'Investimentos',
+        DESPESAS: 'Despesas da Casa',
+        LAUNCHER: 'Meus Apps'
+      };
+      this._tipos = { sugestao: 'Sugestão', problema: 'Problema', elogio: 'Elogio' };
+      this._principais = ['CAMBIO', 'CRIPTO', 'LIVROCAIXA', 'TAXOMETRO', 'INVEST'];
+    }
+
+    get apps() { return this._apps; }
+    get tipos() { return this._tipos; }
+    get principais() { return this._principais; }
+
+    getNomeApp(id) { return this._apps[id] || id; }
+    getNomeTipo(t) { return this._tipos[t] || t; }
+  }
+
+  class Rating {
+    constructor(data) {
+      this._id = data.id;
+      this._app = data.app;
+      this._nota = data.nota;
+      this._criadoEm = data.criadoEm;
+    }
+    get app() { return this._app; }
+    get nota() { return this._nota; }
+    isValid() { return Number.isInteger(this._nota) && this._nota >= 1 && this._nota <= 5; }
+  }
+
+  class Suggestion {
+    constructor(data) {
+      this._id = data.id;
+      this._app = data.app;
+      this._tipo = data.tipo;
+      this._texto = data.texto || '';
+      this._email = data.email || '';
+      this._lida = !!data.lida;
+      this._criadoEm = data.criadoEm;
+    }
+    
+    get app() { return this._app; }
+    get tipo() { return this._tipo; }
+    get texto() { return this._texto; }
+    get email() { return this._email; }
+    get lida() { return this._lida; }
+    get criadoEm() { return this._criadoEm; }
+    
+    isEmailValid() {
+      return typeof this._email === 'string' && this._email.length <= 120 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this._email);
+    }
+  }
+
+  // ==========================================
+  // APPLICATION LAYER (Use Cases)
+  // ==========================================
+  class FeedbackService {
+    constructor() {
+      this._dictionary = new AppDictionary();
+    }
+
+    getResumo(avaliacoesRaw, appsList) {
+      const apps = appsList || this._dictionary.principais;
+      const vazio = () => ({ total: 0, soma: 0, media: 0, dist: [0, 0, 0, 0, 0] });
+      const porApp = {};
+      apps.forEach((a) => { porApp[a] = vazio(); });
+      const geral = vazio();
+
+      for (const item of avaliacoesRaw) {
+        const r = new Rating(item);
+        if (!r.isValid()) continue;
+        
+        if (!porApp[r.app]) porApp[r.app] = vazio();
+        for (const bucket of [porApp[r.app], geral]) { 
+          bucket.total++; 
+          bucket.soma += r.nota; 
+          bucket.dist[r.nota - 1]++; 
+        }
+      }
+      for (const bucket of [...Object.values(porApp), geral]) {
+        bucket.media = bucket.total ? bucket.soma / bucket.total : 0;
+      }
+      return { porApp, geral };
+    }
+
+    _removeAcentos(s) {
+      return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    filtrarSugestoes(sugestoesRaw, filters) {
+      const { app = '', tipo = '', status = 'todas', busca = '' } = filters || {};
+      const termo = this._removeAcentos(busca.trim());
+      const getTime = (d) => (d instanceof Date ? d.getTime() : 0);
+
+      return sugestoesRaw
+        .map(s => new Suggestion(s))
+        .filter((s) => (!app || s.app === app)
+          && (!tipo || s.tipo === tipo)
+          && (status === 'todas' || (status === 'novas' ? !s.lida : !!s.lida))
+          && (!termo || this._removeAcentos(`${s.texto} ${s.email}`).includes(termo)))
+        .sort((a, b) => getTime(b.criadoEm) - getTime(a.criadoEm));
+    }
+
+    gerarCsv(sugestoes) {
+      const formatCell = (v) => {
+        let s = v == null ? '' : String(v);
+        if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+
+      const linhas = [['data', 'app', 'tipo', 'status', 'email', 'mensagem']];
+      for (const s of sugestoes) {
+        linhas.push([
+          this.formatarDataHora(s.criadoEm), 
+          this._dictionary.getNomeApp(s.app), 
+          this._dictionary.getNomeTipo(s.tipo), 
+          s.lida ? 'lida' : 'nova', 
+          s.email, 
+          s.texto
+        ]);
+      }
+      return '\uFEFF' + linhas.map((l) => l.map(formatCell).join(';')).join('\r\n') + '\r\n';
+    }
+
+    formatarDataHora(d) {
+      if (!(d instanceof Date) || isNaN(d)) return '';
+      const p = (n) => String(n).padStart(2, '0');
+      return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    tempoRelativo(d, agora = new Date()) {
+      if (!(d instanceof Date) || isNaN(d)) return '';
+      const min = Math.floor((agora - d) / 60000);
+      if (min < 1) return 'agora';
+      if (min < 60) return `há ${min} min`;
+      if (min < 24 * 60) return `há ${Math.floor(min / 60)} h`;
+      if (min < 48 * 60) return 'ontem';
+      return this.formatarDataHora(d).slice(0, 10);
+    }
+
+    formatarMedia(n) {
+      return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+
+    gerarLinkResposta(sugestaoRaw) {
+      const s = new Suggestion(sugestaoRaw);
+      if (!s.isEmailValid()) return '';
+      const assunto = `Sobre sua mensagem no ${this._dictionary.getNomeApp(s.app)}`;
+      return `mailto:${encodeURIComponent(s.email).replace(/%40/g, '@')}?subject=${encodeURIComponent(assunto)}`;
+    }
+  }
+
+  // ==========================================
+  // ERROS (relatórios técnicos do stk-pkg-erros.js)
+  // ==========================================
+  // Agrupa ocorrências pela assinatura (mesmo app + versão + mensagem + origem).
+  // Um grupo está resolvido quando todas as ocorrências estão marcadas.
+  function agruparErros(erros, filtros) {
+    const { status = 'abertos', app = '', versao = '' } = filtros || {};
+    const tempo = (d) => (d instanceof Date ? d.getTime() : 0);
+    const grupos = new Map();
+    for (const e of erros || []) {
+      const chave = e.assinatura || e.id;
+      let g = grupos.get(chave);
+      if (!g) {
+        g = { assinatura: chave, app: e.app, versao: e.versao || '', tipo: e.tipo, mensagem: e.mensagem || '', origem: e.origem || '',
+          pilha: e.pilha || '', ids: [], vezes: 0, navegadores: [], primeiro: e.criadoEm || null, ultimo: e.criadoEm || null, abertos: 0 };
+        grupos.set(chave, g);
+      }
+      g.ids.push(e.id); g.vezes++;
+      if (!e.resolvido) g.abertos++;
+      if (e.navegador && !g.navegadores.includes(e.navegador)) g.navegadores.push(e.navegador);
+      if (!g.pilha && e.pilha) g.pilha = e.pilha;
+      if (tempo(e.criadoEm) > tempo(g.ultimo)) g.ultimo = e.criadoEm;
+      if (e.criadoEm && (!g.primeiro || tempo(e.criadoEm) < tempo(g.primeiro))) g.primeiro = e.criadoEm;
+    }
+    return [...grupos.values()]
+      .map((g) => ({ ...g, resolvido: g.abertos === 0 }))
+      .filter((g) => (!app || g.app === app) && (!versao || g.versao === versao)
+        && (status === 'todos' || (status === 'abertos' ? !g.resolvido : g.resolvido)))
+      .sort((a, b) => tempo(b.ultimo) - tempo(a.ultimo));
+  }
+
+  // Versões presentes, da mais nova para a mais antiga (comparação numérica por partes)
+  function versoesErros(erros, app) {
+    const vs = [...new Set((erros || []).filter((e) => !app || e.app === app).map((e) => e.versao).filter(Boolean))];
+    const parte = (v) => v.split('.').map((n) => parseInt(n, 10) || 0);
+    return vs.sort((a, b) => { const x = parte(a), y = parte(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((y[i] || 0) !== (x[i] || 0)) return (y[i] || 0) - (x[i] || 0); } return 0; });
+  }
+
+  // ==========================================
+  // ADAPTER EXPORT (Mantendo assinatura legada)
+  // ==========================================
+  const service = new FeedbackService();
+  const dict = service._dictionary;
+
+  return {
+    APPS: dict.apps,
+    PRINCIPAIS: dict.principais,
+    TIPOS: dict.tipos,
+    nomeApp: id => dict.getNomeApp(id),
+    nomeTipo: t => dict.getNomeTipo(t),
+    resumo: (avaliacoes, apps) => service.getResumo(avaliacoes, apps),
+    filtrar: (sugestoes, filters) => service.filtrarSugestoes(sugestoes, filters).map(s => ({
+       id: s._id, app: s.app, tipo: s.tipo, texto: s.texto, email: s.email, lida: s.lida, criadoEm: s.criadoEm
+    })),
+    csv: sugestoes => service.gerarCsv(sugestoes),
+    celula: v => {
+        let s = v == null ? '' : String(v);
+        if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    },
+    dataHora: d => service.formatarDataHora(d),
+    relativo: (d, a) => service.tempoRelativo(d, a),
+    media: n => service.formatarMedia(n),
+    emailValido: e => (new Suggestion({email: e})).isEmailValid(),
+    linkResposta: s => service.gerarLinkResposta(s),
+    agruparErros,
+    versoesErros,
+
+    CryptoAdapter,
+    FeedbackService,
+    Suggestion,
+    Rating,
+    AppDictionary
   };
-  const TIPOS = { sugestao: 'Sugestão', problema: 'Problema', elogio: 'Elogio' };
-
-  const nomeApp = (id) => APPS[id] || id;
-  const nomeTipo = (t) => TIPOS[t] || t;
-
-  // Os 4 apps no ar sempre aparecem (mesmo sem avaliação); os demais só quando tiverem avaliação.
-  const PRINCIPAIS = ['CAMBIO', 'CRIPTO', 'LIVROCAIXA', 'TAXOMETRO'];
-
-  // Média, total e distribuição 1–5 por app, mais o geral.
-  function resumo(avaliacoes, apps = PRINCIPAIS) {
-    const vazio = () => ({ total: 0, soma: 0, media: 0, dist: [0, 0, 0, 0, 0] });
-    const porApp = {};
-    apps.forEach((a) => { porApp[a] = vazio(); });
-    const geral = vazio();
-    for (const { app, nota } of avaliacoes) {
-      if (!Number.isInteger(nota) || nota < 1 || nota > 5) continue;
-      if (!porApp[app]) porApp[app] = vazio();
-      for (const r of [porApp[app], geral]) { r.total++; r.soma += nota; r.dist[nota - 1]++; }
-    }
-    for (const r of [...Object.values(porApp), geral]) r.media = r.total ? r.soma / r.total : 0;
-    return { porApp, geral };
-  }
-
-  const semAcento = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
-  // filtro: { app: '' | id, tipo: '' | tipo, status: 'todas' | 'novas' | 'lidas', busca: texto }
-  function filtrar(sugestoes, { app = '', tipo = '', status = 'todas', busca = '' } = {}) {
-    const termo = semAcento(busca.trim());
-    return sugestoes
-      .filter((s) => (!app || s.app === app)
-        && (!tipo || s.tipo === tipo)
-        && (status === 'todas' || (status === 'novas' ? !s.lida : !!s.lida))
-        && (!termo || semAcento(`${s.texto} ${s.email || ''}`).includes(termo)))
-      .sort((a, b) => tempo(b.criadoEm) - tempo(a.criadoEm));
-  }
-  const tempo = (d) => (d instanceof Date ? d.getTime() : 0);
-
-  // CSV para planilha (separador ;, BOM UTF-8). Células que começam com = + - @ ganham ' na frente
-  // para a planilha não executar fórmula vinda de texto enviado por terceiros.
-  function celula(v) {
-    let s = v == null ? '' : String(v);
-    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-    return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-  function csv(sugestoes) {
-    const linhas = [['data', 'app', 'tipo', 'status', 'email', 'mensagem']];
-    for (const s of sugestoes) {
-      linhas.push([dataHora(s.criadoEm), nomeApp(s.app), nomeTipo(s.tipo), s.lida ? 'lida' : 'nova', s.email || '', s.texto]);
-    }
-    return '﻿' + linhas.map((l) => l.map(celula).join(';')).join('\r\n') + '\r\n';
-  }
-
-  function dataHora(d) {
-    if (!(d instanceof Date) || isNaN(d)) return '';
-    const p = (n) => String(n).padStart(2, '0');
-    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
-  }
-
-  // "há 5 min", "há 3 h", "ontem", senão a data
-  function relativo(d, agora = new Date()) {
-    if (!(d instanceof Date) || isNaN(d)) return '';
-    const min = Math.floor((agora - d) / 60000);
-    if (min < 1) return 'agora';
-    if (min < 60) return `há ${min} min`;
-    if (min < 24 * 60) return `há ${Math.floor(min / 60)} h`;
-    if (min < 48 * 60) return 'ontem';
-    return dataHora(d).slice(0, 10);
-  }
-
-  const media = (n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
-  // Só e-mails no formato aceito pelas regras viram link mailto
-  const emailValido = (e) => typeof e === 'string' && e.length <= 120 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
-  function linkResposta(s) {
-    if (!emailValido(s.email)) return '';
-    const assunto = `Sobre sua mensagem no ${nomeApp(s.app)}`;
-    return `mailto:${encodeURIComponent(s.email).replace(/%40/g, '@')}?subject=${encodeURIComponent(assunto)}`;
-  }
-
-  const api = { APPS, PRINCIPAIS, TIPOS, nomeApp, nomeTipo, resumo, filtrar, csv, celula, dataHora, relativo, media, emailValido, linkResposta };
-  if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.PainelCore = api;
-})(typeof self !== 'undefined' ? self : this);
+});
