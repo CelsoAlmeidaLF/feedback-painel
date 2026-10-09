@@ -28,6 +28,8 @@ O painel abre pelo kit de segurança (`PACOTES/stk-pkg-security`), como os outro
 - **Abrir:** PIN FINANC (o mesmo dos apps no endereço `celsoalmeidalf.github.io`) ou biometria. Sem desbloquear, nada aparece.
 - **Entrar sozinho:** no primeiro login, com "Guardar e-mail e senha neste aparelho" marcado, a conta vai para o cofre (`secureStorage`, chave `painel:conta`), cifrado com AES-GCM por chave derivada do PIN (PBKDF2 600 mil) ou da biometria. Nos próximos desbloqueios o painel lê o cofre e entra no Firebase sem digitar nada.
 - **Sessão do Firebase só na memória** (`inMemoryPersistence`): fechar a aba ou bloquear derruba o login. O token que as versões antigas guardavam sem cifra (`firebaseLocalStorageDb`) é apagado.
+- **Só o dono entra:** depois do login, o painel só abre quando o Firestore confirma a conta como dona (leitura de `sugestoes`). Sem login, ou com login sem acesso, fica na tela de entrar; no segundo caso sai da conta e mostra e-mail e UID.
+- **Mostrar ou ocultar senha:** botão de olho em todo campo de senha (kit de segurança).
 - **Status no topo:** "Conectado como <e-mail>" (verde) ou "Desconectado". Se o Firestore recusar a leitura, o aviso mostra o e-mail e o UID conectados e o botão **Entrar de novo**.
 - **Menu ⋮ → Configurações:** PIN, senha no lugar do PIN, biometria, bloqueio automático e código de recuperação (do kit), mais a seção **Conta do painel**: **Entrar de novo com e-mail e senha** (faz o login e guarda no cofre), trocar a senha da conta no Firebase (10+ caracteres; atualiza o cofre), esquecer e-mail e senha deste aparelho, sair da conta.
 - **Risco aceito:** com o celular nas mãos, alguém pode tentar adivinhar o PIN de 6 números fora do app (horas, não anos). Para a senha do painel ficar mais protegida, use **Configurações → Usar senha em vez de PIN** com uma frase longa.
@@ -63,4 +65,4 @@ cd src && python3 -m http.server 8780      # abrir http://localhost:8780 (localh
 
 Publicação: GitHub Pages pelo workflow `.github/workflows/static.yml` (pasta `src`).
 
-Versão atual: **1.5.1** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 26 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.
+Versão atual: **1.6.0** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 27 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.
