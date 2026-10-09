@@ -232,6 +232,116 @@
   }
 
   // ==========================================
+  // VISÃO AERO 3.0: tendência, gráfico, ilha e "Pergunte ao painel"
+  // ==========================================
+  const DIA = 24 * 60 * 60 * 1000;
+  const ms = (d) => (d instanceof Date ? d.getTime() : typeof d === 'number' ? d : 0);
+  const mediaDe = (ns) => (ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : 0);
+  const notasValidas = (lista) => (lista || []).filter((a) => Number.isInteger(a.nota) && a.nota >= 1 && a.nota <= 5 && ms(a.criadoEm));
+
+  // Média dos últimos 30 dias comparada aos 30 anteriores; null se faltar base em um dos períodos.
+  function tendencia(avaliacoes, agora) {
+    const ag = ms(agora) || Date.now(), lista = notasValidas(avaliacoes);
+    const r = lista.filter((a) => ag - ms(a.criadoEm) < 30 * DIA).map((a) => a.nota);
+    const p = lista.filter((a) => ag - ms(a.criadoEm) >= 30 * DIA && ag - ms(a.criadoEm) < 60 * DIA).map((a) => a.nota);
+    if (!r.length || !p.length) return null;
+    const d = mediaDe(r) - mediaDe(p);
+    if (Math.abs(d) < 0.05) return { cls: 'igual', txt: '= estável', d };
+    return { cls: d > 0 ? 'sobe' : 'desce', txt: (d > 0 ? '↑ +' : '↓ −') + service.formatarMedia(Math.abs(d)), d };
+  }
+
+  // Média de cada semana, da mais antiga (índice 0) à atual; null na semana sem avaliação.
+  function mediasSemanais(avaliacoes, agora, semanas) {
+    const ag = ms(agora) || Date.now(), n = semanas || 8, lista = notasValidas(avaliacoes), out = [];
+    for (let w = n - 1; w >= 0; w--) {
+      const ns = lista.filter((a) => { const idade = ag - ms(a.criadoEm); return idade >= w * 7 * DIA && idade < (w + 1) * 7 * DIA; }).map((a) => a.nota);
+      out.push(ns.length ? mediaDe(ns) : null);
+    }
+    return out;
+  }
+
+  // O que a ilha viva destaca: erro aberto nas últimas 24 h > sugestões novas > tudo em dia.
+  function destaque(sugestoes, grupos, agora) {
+    const ag = ms(agora) || Date.now();
+    const recentes = (grupos || []).filter((g) => !g.resolvido && ag - ms(g.ultimo) < DIA).sort((a, b) => ms(b.ultimo) - ms(a.ultimo));
+    if (recentes.length) { const g = recentes[0]; return { tipo: 'erro', app: g.app, vezes: g.vezes, mensagem: String(g.mensagem || '').slice(0, 90), quando: g.ultimo }; }
+    const novas = (sugestoes || []).filter((s) => !s.lida).sort((a, b) => ms(b.criadoEm) - ms(a.criadoEm));
+    if (novas.length) return { tipo: 'sugestoes', total: novas.length, app: novas[0].app, quando: novas[0].criadoEm };
+    return { tipo: 'em-dia' };
+  }
+
+  // Respostas calculadas com os dados (sem rede). Devolve trechos [texto, negrito] para a interface
+  // montar com textContent: nada vindo do Firestore vira HTML.
+  function responderPergunta(pergunta, dados) {
+    const t = service._removeAcentos(pergunta || '');
+    const { avaliacoes = [], sugestoes = [], erros = [], agora } = dados || {};
+    const nome = (id) => service._dictionary.getNomeApp(id);
+    const porApp = Object.keys(service._dictionary.apps).map((id) => {
+      const ns = notasValidas(avaliacoes).filter((a) => a.app === id).map((a) => a.nota);
+      return { id, n: ns.length, m: mediaDe(ns) };
+    }).filter((x) => x.n);
+    const med = (m) => service.formatarMedia(m);
+    if (/pior|baixa|menor/.test(t) && porApp.length) {
+      const p = porApp.sort((a, b) => a.m - b.m)[0];
+      return [['A menor média é do '], [nome(p.id), true], [': '], [med(p.m), true], [` em ${p.n} ${p.n === 1 ? 'avaliação' : 'avaliações'}.`]];
+    }
+    if (/melhor|maior nota/.test(t) && porApp.length) {
+      const p = porApp.sort((a, b) => b.m - a.m)[0];
+      return [['A maior média é do '], [nome(p.id), true], [': '], [med(p.m), true], [` em ${p.n} ${p.n === 1 ? 'avaliação' : 'avaliações'}.`]];
+    }
+    if (/tendenc|evolu|subiu|caiu|melhorou|piorou/.test(t)) {
+      const r = porApp.map((x) => ({ id: x.id, td: tendencia(avaliacoes.filter((a) => a.app === x.id), agora) })).filter((x) => x.td);
+      if (!r.length) return [['Ainda não há avaliações suficientes para comparar os últimos 30 dias com os 30 anteriores.']];
+      const up = r.filter((x) => x.td.d > 0.05).map((x) => nome(x.id)), dn = r.filter((x) => x.td.d < -0.05).map((x) => nome(x.id));
+      const out = [];
+      if (up.length) out.push(['Subiram: '], [up.join(', '), true], ['. ']);
+      if (dn.length) out.push(['Caíram: '], [dn.join(', '), true], ['.']);
+      else out.push(['Nenhum app caiu nos últimos 30 dias.']);
+      return out;
+    }
+    if (/erro/.test(t)) {
+      const a = agruparErros(erros, { status: 'abertos' });
+      if (!a.length) return [['Nenhum erro aberto agora.']];
+      const g = a.slice().sort((x, y) => y.vezes - x.vezes)[0];
+      return [['Sim, '], [String(a.length), true], [a.length === 1 ? ' erro aberto. ' : ' erros abertos. '], ['O mais frequente é no '], [`${nome(g.app)} v${g.versao || '?'}`, true], [` (${g.vezes}×).`]];
+    }
+    if (/pedem|sugest|mais/.test(t)) {
+      const cont = {};
+      sugestoes.filter((s) => s.tipo === 'sugestao').forEach((s) => { cont[s.app] = (cont[s.app] || 0) + 1; });
+      const top = Object.entries(cont).sort((a, b) => b[1] - a[1])[0];
+      if (!top) return [['Ainda não há sugestões.']];
+      const novas = sugestoes.filter((s) => !s.lida).length;
+      return [['O '], [nome(top[0]), true], [` recebe mais sugestões (${top[1]}). ${novas} ${novas === 1 ? 'ainda está' : 'ainda estão'} sem leitura.`]];
+    }
+    return [['Posso responder sobre notas por app, tendência, sugestões e erros.']];
+  }
+
+  // Link para abrir issue no GitHub com os dados técnicos do grupo de erros.
+  const REPOS = { CAMBIO: 'CelsoAlmeidaLF/cambio-sim', CRIPTO: 'CelsoAlmeidaLF/cripto-sim', LIVROCAIXA: 'CelsoAlmeidaLF/gerenc-fin', TAXOMETRO: 'CelsoAlmeidaLF/taxometro', INVEST: 'CelsoAlmeidaLF/invest-sim' };
+  const TIPO_ERRO = { erro: 'Erro', promessa: 'Promessa', console: 'Console' };
+  function linkIssue(g) {
+    const nome = service._dictionary.getNomeApp(g.app);
+    const titulo = `[${nome} v${g.versao || '?'}] ${g.mensagem || ''}`.slice(0, 120);
+    const corpo = [
+      `**App:** ${nome} v${g.versao || '?'}`,
+      `**Ocorrências:** ${g.vezes} (primeira ${service.formatarDataHora(g.primeiro)}, última ${service.formatarDataHora(g.ultimo)})`,
+      `**Tipo:** ${TIPO_ERRO[g.tipo] || g.tipo || 'Erro'}`,
+      `**Origem:** \`${g.origem || '?'}\``,
+      `**Navegadores:** ${(g.navegadores || []).join(', ')}`,
+      '', '```', g.mensagem || '', g.pilha || '', '```', '', '_Aberta pelo painel de feedback._',
+    ].join('\n');
+    const repo = REPOS[g.app] || 'CelsoAlmeidaLF/feedback-painel';
+    return `https://github.com/${repo}/issues/new?labels=bug&title=${encodeURIComponent(titulo)}&body=${encodeURIComponent(corpo.slice(0, 6000))}`;
+  }
+
+  // Duas letras para o avatar, a partir do e-mail (ex.: celso.almeida@… → CA).
+  function iniciais(email) {
+    const partes = String(email || '').split('@')[0].split(/[._\-+]+/).filter(Boolean);
+    const s = partes.length > 1 ? partes[0][0] + partes[1][0] : (partes[0] || '?').slice(0, 2);
+    return s.toUpperCase();
+  }
+
+  // ==========================================
   // ADAPTER EXPORT (Mantendo assinatura legada)
   // ==========================================
   const service = new FeedbackService();
@@ -260,6 +370,14 @@
     linkResposta: s => service.gerarLinkResposta(s),
     agruparErros,
     versoesErros,
+    tendencia,
+    mediasSemanais,
+    destaque,
+    responderPergunta,
+    linkIssue,
+    iniciais,
+    REPOS,
+    TIPO_ERRO,
 
     CryptoAdapter,
     FeedbackService,
