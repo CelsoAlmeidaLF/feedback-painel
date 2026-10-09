@@ -460,23 +460,6 @@ async function acaoErro(botao, fn) {
   catch (_) { botao.disabled = false; msg($('msgErros'), 'Não foi possível concluir. Verifique a conexão.', 'err'); }
 }
 
-// ═════ Pergunte ao painel (respostas calculadas com os dados, sem rede) ═════
-function responder(pergunta) {
-  if (!pergunta.trim()) return;
-  const partes = C.responderPergunta(pergunta, { avaliacoes, sugestoes: sugVisiveis(), erros: errosVisiveis(), agora: new Date() });
-  const alvo = $('ansA'), texto = partes.map((p) => p[0]).join('');
-  $('ansQ').textContent = pergunta; $('answer').classList.add('on');
-  const final = () => { alvo.replaceChildren(...partes.map(([t, b]) => (b ? el('b', '', t) : document.createTextNode(t)))); };
-  if (RM) { final(); return; }
-  let i = 0;
-  (function passo() {
-    i += 2;
-    if (i < texto.length) { alvo.replaceChildren(texto.slice(0, i), el('span', 'caret')); setTimeout(passo, 16); } else final();
-  })();
-}
-$('ask').addEventListener('submit', (e) => { e.preventDefault(); responder($('askIn').value); $('askIn').value = ''; });
-$('sugs').addEventListener('click', (e) => { const b = e.target.closest('.sug'); if (b) responder(b.textContent); });
-
 // ═════ Filtros e visões ═════
 const moverStatus = seletor($('fStatus'), (v) => { filtro.status = v; renderSugestoes(); });
 const moverErro = seletor($('fErroStatus'), (v) => { filtroErro.status = v; renderListaErros(); });
