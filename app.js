@@ -163,6 +163,7 @@ onAuthStateChanged(auth, (user) => {
   if (pararAval) pararAval(); if (pararSug) pararSug(); if (pararErros) pararErros();
   pararAval = pararSug = pararErros = null;
   avaliacoes = []; sugestoes = []; erros = []; carregou = false; ocultos.clear();
+  statusLogin(user);
   if (!user) { entrarSozinho(); return; }
   $('avatar').textContent = C.iniciais(user.email);
   $('avatar').title = user.email;
@@ -185,10 +186,19 @@ onAuthStateChanged(auth, (user) => {
       : 'Não foi possível carregar os erros. Verifique a conexão e recarregue a página.', 'err'));
 });
 function falha(err) {
-  const semAcesso = err && err.code === 'permission-denied';
-  msg($('msgPainel'), semAcesso
-    ? 'Esta conta não tem acesso às sugestões. Só a conta dona do projeto pode lê-las.'
-    : 'Não foi possível carregar os dados. Verifique a conexão e recarregue a página.', 'err');
+  const alvo = $('msgPainel'), u = auth.currentUser;
+  if (!(err && err.code === 'permission-denied')) { msg(alvo, 'Não foi possível carregar os dados. Verifique a conexão e recarregue a página.', 'err'); return; }
+  // Mostra quem está conectado: se for o dono, o problema está na regra do Firestore (UID em dono()), não no login.
+  msg(alvo, `Você está conectado como ${u ? u.email : '?'} (UID ${u ? u.uid : '?'}), mas o Firestore recusou a leitura. `
+    + 'Se esta é a sua conta, a regra dono() está com outro UID: publique as regras corrigidas. Se não for, entre de novo com a conta certa.', 'err');
+  const b = el('button', 'btn btn-secondary btn-sm', 'Entrar de novo'); b.type = 'button';
+  b.addEventListener('click', abrirConta);
+  alvo.append(b);
+}
+// Mostra no topo se o painel está conectado ao Firebase e com qual conta.
+function statusLogin(user) {
+  $('statusLogin').classList.toggle('on', !!user);
+  $('statusTexto').textContent = user ? 'Conectado como ' + user.email : 'Desconectado';
 }
 const sugVisiveis = () => sugestoes.filter((s) => !ocultos.has(s.id));
 const errosVisiveis = () => erros.filter((e) => !ocultos.has(e.id));
@@ -519,7 +529,7 @@ async function entrarSozinho() {
 // ═════ Configurações: seção "Conta do painel" (menu ⋮ e tela de Configurações do kit) ═════
 function secoesConfiguracoes() {
   FinancSettings.addSection({ title: 'Conta do painel', rows: [
-    { icon: 'user', label: 'E-mail e senha', description: 'O que fica guardado no cofre deste aparelho para entrar sozinho.', onClick: abrirConta },
+    { icon: 'user', label: 'Entrar de novo com e-mail e senha', description: 'Faz o login de novo e guarda no cofre para entrar só com o PIN.', onClick: abrirConta },
     { icon: 'key', label: 'Trocar a senha da conta', description: 'Muda a senha de login do painel no Firebase.', onClick: abrirSenha },
     { icon: 'trash', label: 'Esquecer e-mail e senha', description: 'Apaga só deste aparelho. A conta continua igual.', danger: true, onClick: esquecerConta },
     { icon: 'arrow-left', label: 'Sair da conta', description: 'Volta para a tela de entrar até o próximo desbloqueio.', onClick: UiEvents.sair },
@@ -532,7 +542,8 @@ function abrirConta() {
   const d = $('dlgConta'); abrirDialogo(d);
   const conta = C.lerCredenciais(secureStorage.getItem(C.CHAVE_CONTA));
   $('contaEmail').value = conta ? conta.email : (auth.currentUser ? auth.currentUser.email : '');
-  msg($('msgConta'), conta ? 'Guardado: ' + conta.email + '. Para trocar, digite o e-mail e a senha novos.' : 'Nada guardado neste aparelho ainda.');
+  const u = auth.currentUser;
+  msg($('msgConta'), (u ? 'Conectado agora como ' + u.email + '. ' : 'Desconectado agora. ') + (conta ? 'Guardado no cofre: ' + conta.email + '.' : 'Nada guardado no cofre ainda.'));
   (conta ? $('contaSenha') : $('contaEmail')).focus();
 }
 $('formConta').addEventListener('submit', async (e) => {
@@ -544,7 +555,7 @@ $('formConta').addEventListener('submit', async (e) => {
   try {
     await signInWithEmailAndPassword(auth, email, senha); // só guarda o que funciona
     secureStorage.setItem(C.CHAVE_CONTA, texto);
-    saiu = false; $('dlgConta').close(); toast('E-mail e senha guardados no cofre');
+    saiu = false; $('dlgConta').close(); toast('Conectado e guardado no cofre');
   } catch (err) { msg($('msgConta'), ERROS_LOGIN[err.code] || 'Não foi possível entrar com esses dados.', 'err'); }
   finally { b.disabled = false; $('contaSenha').value = ''; }
 });
