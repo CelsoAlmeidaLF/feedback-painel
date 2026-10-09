@@ -42,12 +42,26 @@ O painel abre pelo kit de segurança (`PACOTES/stk-pkg-security`), como os outro
 
 ## Instalar no celular (v1.5.0)
 
-O painel é um PWA: `manifest.json`, ícones Aero (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon-32.png`) e `sw.js`, registrado pelo kit de segurança.
+O painel é um PWA: `manifest.json`, ícones Aero (`icon-192.png`, `icon-512.png`, `icon-maskable-192.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon.ico` e `favicon-16/32/48.png`, todos com `?v=2`) e `sw.js`, registrado pelo kit de segurança. Na v1.6.1 o manifesto e o service worker passaram a seguir o modelo do Finanças da Casa (que instala no Android).
 
-- **Android (Chrome):** menu ⋮ do painel → Configurações → **Instalar app**, ou menu do Chrome → **Instalar app** / "Adicionar à tela inicial".
+- **Android (Chrome):** abra pelo endereço `systekna-feedback.web.app` e use menu ⋮ do painel → Configurações → **Instalar app**, ou menu do Chrome → **Instalar app** / "Adicionar à tela inicial". Pelo GitHub Pages o Android instalava mas mostrava "Não é possível abrir o aplicativo".
 - **iPhone (Safari):** Compartilhar → **Adicionar à Tela de Início**.
 - O service worker busca **primeiro na rede**: versão nova vale na hora; sem internet, a tela abre do cache (os dados precisam de rede). Firebase e Google nunca passam pelo cache.
 - Ao mudar arquivos do app, troque `data-vault-version` no `index.html` e `CACHE_NAME` no `sw.js` (o teste `pwa.test.js` confere).
+
+## Versões
+
+| Versão | O que mudou |
+| --- | --- |
+| 1.2.0 | Visão **Erros** (relatórios do `stk-pkg-erros.js`) |
+| 1.3.0 | Design Aero 3.0, ilha viva, evolução da nota, gestos e desfazer |
+| 1.3.1 | "Pergunte ao painel" removido |
+| 1.4.0 | Cofre, PIN, biometria e Configurações (PR #6) |
+| 1.5.0 | PWA instalável (PR #7) |
+| 1.5.1 | Status do login e "Entrar de novo" (PR #8) |
+| 1.6.0 | Mostrar ou ocultar senha; painel só abre depois que o Firestore confirma o dono (PR #9) |
+| 1.6.1 | PWA igual ao do Finanças da Casa, que instala no Android (PR #10) |
+| — | Firebase Hosting em `systekna-feedback.web.app` (PR #11, sem mudar a versão) |
 
 ## Estrutura
 
@@ -59,7 +73,9 @@ src/painel-core.js  regras puras: resumo, filtros, CSV, datas, agrupamento de er
 src/painel.css      design Aero 3.0 (tokens claro/escuro/luz ambiente e componentes)
 src/fonts/          Open Sans variável + licença OFL
 src/stk-pkg-*       kit de segurança e ícones (cópias de PACOTES/stk-pkg-security; não editar aqui)
-test/               node --test
+test/               node --test: painel-core (regras), cofre-integracao (kit e login), pwa (manifesto e SW),
+                    hospedagem (firebase.json e workflow)
+firebase.json       Firebase Hosting: pasta src, cabeçalhos de segurança, no-cache
 ```
 
 ## Rodar
@@ -69,6 +85,6 @@ npm test                                   # testes
 cd src && python3 -m http.server 8780      # abrir http://localhost:8780 (localhost está na chave reCAPTCHA)
 ```
 
-Publicação: GitHub Pages pelo workflow `.github/workflows/static.yml` (pasta `src`).
+Publicação: GitHub Pages pelo workflow `.github/workflows/static.yml` (pasta `src`, a cada push na `main`) e Firebase Hosting com `npx -y firebase-tools deploy --only hosting --project systekna-feedback` (manual).
 
-Versão atual: **1.6.1** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 27 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.
+Versão atual: **1.6.1** (`data-vault-version` no `index.html`), no ar em `celsoalmeidalf.github.io/feedback-painel` (DEV) e `systekna-feedback.web.app`. Situação em 09/10/2026: 36 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.

@@ -207,3 +207,42 @@ test('conta: regras da senha nova', () => {
   assert.match(C.problemaSenhaNova('mesma-senha-10', 'mesma-senha-10', 'mesma-senha-10'), /diferente da atual/);
   assert.equal(C.problemaSenhaNova('senha-nova-boa', 'senha-nova-boa', 'antiga-1234'), '');
 });
+
+// ───────── Formatação, nomes e e-mail ─────────
+test('dataHora: dd/mm/aaaa hh:mm e vazio sem data', () => {
+  assert.equal(C.dataHora(d('2026-10-01T09:05')), '01/10/2026 09:05');
+  assert.equal(C.dataHora(null), '');
+});
+
+test('media: uma casa decimal com vírgula', () => {
+  assert.equal(C.media(4), '4,0');
+  assert.equal(C.media(13 / 4), '3,3');
+  assert.equal(C.media(0), '0,0');
+});
+
+test('nomes: tipo e app conhecidos têm nome; desconhecido volta igual', () => {
+  assert.equal(C.nomeTipo('problema'), 'Problema');
+  assert.equal(C.nomeTipo('sugestao'), 'Sugestão');
+  assert.equal(C.nomeTipo('x'), 'x');
+  assert.equal(C.nomeApp('CAMBIO'), 'Câmbio');
+  assert.equal(C.nomeApp('X'), 'X');
+});
+
+test('emailValido: casos de borda (sem @, espaço, domínio sem ponto, 120 caracteres)', () => {
+  assert.equal(C.emailValido('a@b.co'), true);
+  assert.equal(C.emailValido('A@B.COM'), true);
+  for (const ruim of ['sem-arroba', 'a b@c.com', 'a@b', '', null]) assert.equal(C.emailValido(ruim), false, String(ruim));
+  assert.equal(C.emailValido('x'.repeat(115) + '@b.co'), true, '120 caracteres');
+  assert.equal(C.emailValido('x'.repeat(116) + '@b.co'), false, '121 caracteres');
+});
+
+test('CryptoAdapter: cifra e decifra com AES-GCM (IV de 12 bytes, sempre novo)', async () => {
+  const chave = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const a = await C.CryptoAdapter.encryptData('olá, painel', chave);
+  const b = await C.CryptoAdapter.encryptData('olá, painel', chave);
+  assert.equal(a.iv.length, 12);
+  assert.notDeepEqual(a.iv, b.iv, 'IV muda a cada cifra');
+  assert.equal(await C.CryptoAdapter.decryptData(a, chave), 'olá, painel');
+  const adulterado = { ...a, cipher: a.cipher.map((x, i) => (i === 0 ? x ^ 1 : x)) };
+  await assert.rejects(C.CryptoAdapter.decryptData(adulterado, chave), 'texto alterado não decifra');
+});
