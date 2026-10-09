@@ -1,5 +1,5 @@
 // Painel de feedback: instalável e com a tela abrindo offline. Os dados (Firestore) e o Firebase vêm sempre da rede.
-const CACHE_NAME = 'feedback-painel-v1.5.1';
+const CACHE_NAME = 'feedback-painel-v1.6.0';
 const APP_SHELL = [
   './index.html',
   './painel.css',
