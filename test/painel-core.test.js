@@ -121,3 +121,89 @@ test('apps: Investimentos tem nome e entra nos principais', () => {
   assert.equal(C.nomeApp('INVEST'), 'Investimentos');
   assert.ok(C.PRINCIPAIS.includes('INVEST'));
 });
+
+// ───────── Aero 3.0: tendência, gráfico, ilha, "Pergunte ao painel" ─────────
+const AGORA = d('2026-10-09T12:00:00');
+const diasAtras = (n) => new Date(AGORA.getTime() - n * 24 * 60 * 60 * 1000);
+
+test('tendência: 30 dias contra os 30 anteriores; sem base devolve null', () => {
+  const sobe = [{ app: 'CAMBIO', nota: 3, criadoEm: diasAtras(40) }, { app: 'CAMBIO', nota: 5, criadoEm: diasAtras(5) }];
+  assert.deepEqual(C.tendencia(sobe, AGORA), { cls: 'sobe', txt: '↑ +2,0', d: 2 });
+  const desce = [{ nota: 5, criadoEm: diasAtras(45) }, { nota: 4, criadoEm: diasAtras(2) }];
+  assert.equal(C.tendencia(desce, AGORA).cls, 'desce');
+  assert.equal(C.tendencia(desce, AGORA).txt, '↓ −1,0');
+  assert.equal(C.tendencia([{ nota: 4, criadoEm: diasAtras(40) }, { nota: 4, criadoEm: diasAtras(1) }], AGORA).cls, 'igual');
+  assert.equal(C.tendencia([{ nota: 5, criadoEm: diasAtras(1) }], AGORA), null, 'sem período anterior');
+  assert.equal(C.tendencia([{ nota: 5, criadoEm: diasAtras(70) }, { nota: 1, criadoEm: diasAtras(1) }], AGORA), null, 'mais de 60 dias não conta');
+  assert.equal(C.tendencia([{ nota: 9, criadoEm: diasAtras(40) }, { nota: 5, criadoEm: diasAtras(1) }], AGORA), null, 'nota inválida é ignorada');
+});
+
+test('médias semanais: 8 semanas da mais antiga para a atual, null sem avaliação', () => {
+  const lista = [
+    { nota: 4, criadoEm: diasAtras(1) }, { nota: 2, criadoEm: diasAtras(3) },
+    { nota: 5, criadoEm: diasAtras(50) }, { nota: 3, criadoEm: diasAtras(60) },
+    { nota: 5, criadoEm: null },
+  ];
+  const s = C.mediasSemanais(lista, AGORA, 8);
+  assert.equal(s.length, 8);
+  assert.equal(s[7], 3, 'semana atual = (4 + 2) / 2');
+  assert.equal(s[0], 5, 'dia 50 cai na semana mais antiga (dias 49 a 55); dia 60 fica fora das 8 semanas');
+  assert.deepEqual(s.slice(1, 7), [null, null, null, null, null, null]);
+});
+
+test('ilha: erro aberto nas últimas 24 h vence sugestões novas', () => {
+  const grupos = [{ app: 'CRIPTO', vezes: 3, mensagem: 'x'.repeat(200), ultimo: diasAtras(0.1), resolvido: false }];
+  const sugs = [{ app: 'CAMBIO', lida: false, criadoEm: diasAtras(0.01) }];
+  const e = C.destaque(sugs, grupos, AGORA);
+  assert.equal(e.tipo, 'erro'); assert.equal(e.vezes, 3); assert.equal(e.mensagem.length, 90);
+  const velho = [{ ...grupos[0], ultimo: diasAtras(2) }];
+  assert.deepEqual(C.destaque([...sugs, { app: 'CRIPTO', lida: false, criadoEm: diasAtras(3) }], velho, AGORA),
+    { tipo: 'sugestoes', total: 2, app: 'CAMBIO', quando: sugs[0].criadoEm });
+  assert.deepEqual(C.destaque([{ lida: true }], [], AGORA), { tipo: 'em-dia' });
+});
+
+test('pergunte: respostas em trechos de texto (nada vira HTML)', () => {
+  const dados = {
+    agora: AGORA,
+    avaliacoes: [
+      { app: 'CAMBIO', nota: 5, criadoEm: diasAtras(1) }, { app: 'CAMBIO', nota: 4, criadoEm: diasAtras(40) },
+      { app: 'CRIPTO', nota: 2, criadoEm: diasAtras(1) }, { app: 'CRIPTO', nota: 4, criadoEm: diasAtras(40) },
+    ],
+    sugestoes: [
+      { app: 'LIVROCAIXA', tipo: 'sugestao', lida: false }, { app: 'LIVROCAIXA', tipo: 'sugestao', lida: true },
+      { app: 'CAMBIO', tipo: 'sugestao', lida: false }, { app: 'CAMBIO', tipo: 'problema', lida: false },
+    ],
+    erros: [{ id: '1', assinatura: 'a', app: 'CRIPTO', versao: '1.11.1', criadoEm: diasAtras(1) }, { id: '2', assinatura: 'a', app: 'CRIPTO', versao: '1.11.1', criadoEm: diasAtras(1) }],
+  };
+  const txt = (q) => C.responderPergunta(q, dados).map((p) => p[0]).join('');
+  assert.equal(txt('Qual app tem a pior nota?'), 'A menor média é do Cripto: 3,0 em 2 avaliações.');
+  assert.equal(txt('qual tem a MELHOR nota'), 'A maior média é do Câmbio: 4,5 em 2 avaliações.');
+  assert.equal(txt('Qual nota subiu ou caiu?'), 'Subiram: Câmbio. Caíram: Cripto.');
+  assert.equal(txt('Tem erro aberto?'), 'Sim, 1 erro aberto. O mais frequente é no Cripto v1.11.1 (2×).');
+  assert.equal(txt('O que pedem mais?'), 'O Livro-Caixa recebe mais sugestões (2). 3 ainda estão sem leitura.');
+  assert.match(txt('bom dia'), /^Posso responder/);
+  const partes = C.responderPergunta('pior', dados);
+  assert.ok(partes.every((p) => Array.isArray(p) && typeof p[0] === 'string'));
+  assert.deepEqual(partes[1], ['Cripto', true], 'nome do app em negrito');
+  assert.equal(C.responderPergunta('tem erro?', { erros: [] }).map((p) => p[0]).join(''), 'Nenhum erro aberto agora.');
+  assert.match(C.responderPergunta('subiu?', {}).map((p) => p[0]).join(''), /^Ainda não há avaliações suficientes/);
+});
+
+test('issue: link do GitHub com repositório do app e dados técnicos', () => {
+  const g = { app: 'CRIPTO', versao: '1.11.1', vezes: 2, tipo: 'erro', mensagem: "TypeError: x is undefined", origem: 'js/app.js:10:5',
+    pilha: 'at f (js/app.js:10:5)', navegadores: ['Chrome 141 / Android'], primeiro: d('2026-10-08T10:00:00'), ultimo: d('2026-10-09T09:30:00') };
+  const u = new URL(C.linkIssue(g));
+  assert.equal(u.origin + u.pathname, 'https://github.com/CelsoAlmeidaLF/cripto-sim/issues/new');
+  assert.equal(u.searchParams.get('labels'), 'bug');
+  assert.equal(u.searchParams.get('title'), '[Cripto v1.11.1] TypeError: x is undefined');
+  assert.match(u.searchParams.get('body'), /\*\*Ocorrências:\*\* 2 \(primeira 08\/10\/2026 10:00, última 09\/10\/2026 09:30\)/);
+  assert.match(u.searchParams.get('body'), /Chrome 141 \/ Android/);
+  assert.match(C.linkIssue({ ...g, app: 'DESCONHECIDO' }), /^https:\/\/github\.com\/CelsoAlmeidaLF\/feedback-painel\//);
+  assert.ok(C.linkIssue({ ...g, mensagem: 'm'.repeat(500) }).includes('title=' + encodeURIComponent('[Cripto v1.11.1] ' + 'm'.repeat(103))));
+});
+
+test('avatar: iniciais a partir do e-mail', () => {
+  assert.equal(C.iniciais('celso.almeida@hotmail.com'), 'CA');
+  assert.equal(C.iniciais('dono@x.com'), 'DO');
+  assert.equal(C.iniciais(''), '?');
+});
