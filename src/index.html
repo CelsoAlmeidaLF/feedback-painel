@@ -1,117 +1,173 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-version="1.2.0">
+<html lang="pt-BR" data-version="1.3.0">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://firestore.googleapis.com https://content-firebaseappcheck.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com; frame-src https://www.google.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#0E1210">
+<meta name="theme-color" content="#DCEBFA" id="metaTheme">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Feedback dos apps</title>
 <link rel="stylesheet" href="fonts/fonts.css">
-<link rel="stylesheet" href="financ-ui.css">
 <link rel="stylesheet" href="painel.css">
 </head>
 <body>
-<main class="page painel" id="app">
+<div class="sky" aria-hidden="true"></div>
+<div class="orbs" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i></div>
 
-  <!-- ENTRAR -->
-  <section id="telaEntrar" hidden>
-    <div class="eyebrow">FEEDBACK DOS APPS</div>
-    <h1>Painel</h1>
-    <p class="lede">Avaliações, sugestões e relatórios de erro enviados pelos apps.</p>
-    <form class="card stack" id="formEntrar" novalidate>
-      <label class="field">E-mail
-        <input class="input" type="email" id="email" autocomplete="username" required>
-      </label>
-      <label class="field">Senha
-        <input class="input" type="password" id="senha" autocomplete="current-password" required>
-      </label>
-      <button class="btn btn-primary btn-block" type="submit" id="btnEntrar">Entrar</button>
-      <button class="btn btn-ghost btn-block" type="button" id="btnEsqueci">Esqueci a senha</button>
-      <div class="msg" id="msgEntrar" role="status" aria-live="polite"></div>
-    </form>
-  </section>
+<!-- ═════ ENTRAR ═════ -->
+<section class="entrar" id="telaEntrar" hidden>
+  <div class="marca">
+    <span class="avatar" aria-hidden="true"><i data-icon="message-square" data-size="20"></i></span>
+    <div>
+      <div class="eyebrow">Feedback dos apps</div>
+      <h1>Painel</h1>
+    </div>
+    <button class="ib" type="button" id="btnModoEntrar" aria-label="Trocar modo: claro, escuro ou luz ambiente"></button>
+  </div>
+  <p class="lede">Avaliações, sugestões e relatórios de erro enviados pelos apps.</p>
+  <form class="glass" id="formEntrar" novalidate>
+    <label class="f">E-mail
+      <input type="email" id="email" autocomplete="username" required>
+    </label>
+    <label class="f">Senha
+      <input type="password" id="senha" autocomplete="current-password" required>
+    </label>
+    <button class="btn btn-primary btn-block" type="submit" id="btnEntrar">Entrar</button>
+    <button class="btn btn-ghost" type="button" id="btnEsqueci">Esqueci a senha</button>
+    <p class="msg" id="msgEntrar" role="status" aria-live="polite"></p>
+  </form>
+  <p class="note">Protegido por reCAPTCHA. Valem a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidade</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Termos</a> do Google.</p>
+</section>
 
-  <!-- PAINEL -->
-  <section id="telaPainel" hidden>
-    <header class="topo">
-      <div>
-        <div class="eyebrow">FEEDBACK DOS APPS</div>
-        <h1>Painel</h1>
-        <p class="lede"><span id="quem"></span> · <span id="atualizado">conectando…</span></p>
+<!-- ═════ PAINEL ═════ -->
+<div id="telaPainel" hidden>
+<!-- Ilha viva: o que pede atenção agora -->
+<div class="island" id="island" role="button" tabindex="0" aria-expanded="false" aria-label="Destaque do painel">
+  <div class="line"><span class="pulse"></span><span class="it" id="ilhaT">Conectando…</span><b class="num" id="ilhaV"></b></div>
+  <div class="more"><div><p id="ilhaD"></p><button class="btn btn-primary btn-sm btn-block" type="button" id="ilhaGo">Ver agora</button></div></div>
+</div>
+
+<main class="app" id="app">
+
+  <header class="top">
+    <span class="avatar" id="avatar" aria-hidden="true">?</span>
+    <div class="who">
+      <div class="eyebrow">Feedback dos apps</div>
+      <h1 id="ola">Olá</h1>
+    </div>
+    <button class="ib" type="button" id="btnModo" aria-label="Trocar modo: claro, escuro ou luz ambiente"></button>
+    <button class="ib" type="button" id="btnSair" aria-label="Sair"><i data-icon="arrow-left" data-size="20"></i></button>
+  </header>
+
+  <div class="seg big" id="fVisao" role="tablist" aria-label="Visão"><span class="ind"></span>
+    <button type="button" role="tab" data-v="feedback" aria-selected="true">Feedback</button>
+    <button type="button" role="tab" data-v="erros" aria-selected="false">Erros<span class="cont" id="contErros" hidden></span></button>
+  </div>
+
+  <!-- ═════ FEEDBACK ═════ -->
+  <section id="visaoFeedback">
+    <div class="glass aviso" id="msgPainel" role="status" aria-live="polite" style="margin-top:18px"></div>
+    <div class="hero-grid" style="margin-top:18px">
+      <div class="bal-stack" style="margin:0 0 14px"><span class="ghost g2"></span><span class="ghost g1"></span>
+        <article class="glass bal" id="bal"><span class="spec"></span>
+          <div class="lbl"><span>Média geral</span><span class="badge badge-neutral"><span class="live-dot"></span><span id="atualizado">conectando</span></span></div>
+          <div class="v num"><span id="tMedia">–</span> <span class="stars" id="tEstrelas" aria-hidden="true"></span></div>
+          <div class="split">
+            <div><small><i style="background:var(--accent)"></i>Avaliações</small><b class="num" id="tAval">–</b></div>
+            <div><small><i style="background:var(--in)"></i>Sugestões novas</small><b class="num" id="tNovas">–</b></div>
+          </div>
+        </article>
       </div>
-      <button class="btn btn-secondary btn-sm" type="button" id="btnSair">Sair</button>
-    </header>
-
-    <div class="seg visao" id="fVisao" role="tablist" aria-label="Visão">
-      <button type="button" role="tab" data-v="feedback" aria-selected="true" aria-pressed="true">Feedback</button>
-      <button type="button" role="tab" data-v="erros" aria-selected="false" aria-pressed="false">Erros <span class="badge badge-neg" id="tErrosBadge" hidden></span></button>
+      <div>
+        <form class="glass ask prism" id="ask" style="margin-top:0">
+          <svg class="spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+          <input id="askIn" placeholder="Pergunte ao painel…" aria-label="Pergunte ao painel" autocomplete="off" maxlength="120">
+          <button type="submit" aria-label="Perguntar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+        <div class="sugs" id="sugs">
+          <button class="sug" type="button">Qual app tem a pior nota?</button>
+          <button class="sug" type="button">O que pedem mais?</button>
+          <button class="sug" type="button">Tem erro aberto?</button>
+          <button class="sug" type="button">Qual nota subiu ou caiu?</button>
+        </div>
+        <div class="glass answer prism" id="answer" aria-live="polite"><span class="q" id="ansQ"></span><div class="a" id="ansA"></div></div>
+        <div class="ok-rate" style="margin-top:10px">
+          <div class="glass flat stat"><small>Sugestões</small><b class="num" id="tSug">–</b></div>
+          <div class="glass flat stat"><small>Problemas não lidos</small><b class="num" id="tProb">–</b></div>
+        </div>
+      </div>
     </div>
 
-    <div id="visaoFeedback">
-    <div class="stat-grid" id="totais">
-      <div class="stat"><div class="k">Média geral</div><div class="v" id="tMedia">–</div></div>
-      <div class="stat"><div class="k">Avaliações</div><div class="v" id="tAval">–</div></div>
-      <div class="stat"><div class="k">Sugestões</div><div class="v" id="tSug">–</div></div>
-      <div class="stat pos"><div class="k">Novas</div><div class="v" id="tNovas">–</div></div>
-    </div>
+    <div class="sec-h"><b>Evolução da nota</b><span class="hint">últimas 8 semanas</span></div>
+    <article class="glass flat evo">
+      <div class="evo-h"><div><small id="evoRot">Todos os apps</small><br><b class="num" id="evoMedia">–</b></div><span class="tend igual" id="evoTend">–</span></div>
+      <svg class="grafico" id="grafico" viewBox="0 0 320 150" preserveAspectRatio="none" role="img" aria-label="Média semanal das avaliações"></svg>
+      <div class="chips" id="evoApp" role="group" aria-label="App do gráfico"></div>
+    </article>
 
-    <h2 class="section-title">Avaliações por app</h2>
+    <div class="sec-h"><b>Avaliações por app</b><span class="hint">tendência: 30 dias × 30 anteriores</span></div>
     <div class="apps" id="listaApps"></div>
 
-    <h2 class="section-title">Sugestões
-      <button class="btn btn-ghost btn-sm" type="button" id="btnCsv" title="Exportar a lista filtrada">Exportar CSV</button>
-    </h2>
+    <div class="sec-h"><b>Sugestões</b><button class="btn btn-ghost" type="button" id="btnCsv" title="Exportar a lista filtrada"><i data-icon="download" data-size="16"></i> Exportar CSV</button></div>
     <div class="filtros">
-      <div class="seg seg-sm" id="fStatus" role="group" aria-label="Status">
+      <div class="seg" id="fStatus" role="group" aria-label="Status"><span class="ind"></span>
         <button type="button" data-v="novas" aria-pressed="true">Novas</button>
         <button type="button" data-v="todas" aria-pressed="false">Todas</button>
         <button type="button" data-v="lidas" aria-pressed="false">Lidas</button>
       </div>
-      <div class="seg seg-sm" id="fTipo" role="group" aria-label="Tipo">
-        <button type="button" data-v="" aria-pressed="true">Todos</button>
-        <button type="button" data-v="sugestao" aria-pressed="false">Sugestão</button>
-        <button type="button" data-v="problema" aria-pressed="false">Problema</button>
-        <button type="button" data-v="elogio" aria-pressed="false">Elogio</button>
+      <div class="chips" id="fTipo" role="group" aria-label="Tipo">
+        <button class="chip" type="button" data-v="" aria-pressed="true">Todos</button>
+        <button class="chip" type="button" data-v="sugestao" aria-pressed="false">Sugestão</button>
+        <button class="chip" type="button" data-v="problema" aria-pressed="false">Problema</button>
+        <button class="chip" type="button" data-v="elogio" aria-pressed="false">Elogio</button>
       </div>
-      <div class="filtros-linha">
+      <div class="linha">
         <select class="select" id="fApp" aria-label="App"><option value="">Todos os apps</option></select>
-        <input class="input input-search" type="search" id="fBusca" placeholder="Buscar no texto ou e-mail" aria-label="Buscar">
+        <label class="search"><i data-icon="message-square" data-size="18"></i><input type="search" id="fBusca" placeholder="Buscar no texto ou e-mail" aria-label="Buscar"></label>
       </div>
     </div>
-    <div class="msg" id="msgPainel" role="status" aria-live="polite"></div>
-    <div id="listaSug" class="card lista"></div>
-    </div>
-
-    <div id="visaoErros" hidden>
-      <div class="stat-grid" id="totaisErros">
-        <div class="stat neg"><div class="k">Erros abertos</div><div class="v" id="eAbertos">–</div></div>
-        <div class="stat"><div class="k">Ocorrências (7 dias)</div><div class="v" id="eSemana">–</div></div>
-        <div class="stat"><div class="k">Apps afetados</div><div class="v" id="eApps">–</div></div>
-        <div class="stat"><div class="k">Último erro</div><div class="v" id="eUltimo">–</div></div>
-      </div>
-      <h2 class="section-title">Relatórios de erro</h2>
-      <p class="note">Enviados com permissão dos testadores (modo testador ou "Enviar relatório"). Só dados técnicos: mensagem limpa, arquivo e linha, versão e navegador.</p>
-      <div class="filtros">
-        <div class="seg seg-sm" id="fErroStatus" role="group" aria-label="Status do erro">
-          <button type="button" data-v="abertos" aria-pressed="true">Abertos</button>
-          <button type="button" data-v="todos" aria-pressed="false">Todos</button>
-          <button type="button" data-v="resolvidos" aria-pressed="false">Resolvidos</button>
-        </div>
-        <div class="filtros-linha">
-          <select class="select" id="fErroApp" aria-label="App"><option value="">Todos os apps</option></select>
-          <select class="select" id="fErroVersao" aria-label="Versão"><option value="">Todas as versões</option></select>
-        </div>
-      </div>
-      <div class="msg" id="msgErros" role="status" aria-live="polite"></div>
-      <div id="listaErros" class="card lista"></div>
-    </div>
-    <p class="note">Protegido por reCAPTCHA. Valem a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidade</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Termos</a> do Google.</p>
+    <p class="lede" style="margin:0 2px 10px;font-size:12px;color:var(--faint)">Dica: deslize uma sugestão para a direita para marcar como lida, ou para a esquerda para excluir.</p>
+    <div class="lista" id="listaSug"></div>
   </section>
 
-  <noscript><p class="lede">Ative o JavaScript para usar o painel.</p></noscript>
+  <!-- ═════ ERROS ═════ -->
+  <section id="visaoErros" hidden>
+    <div class="sec-h" style="margin-top:22px"><b>Saúde dos apps</b></div>
+    <div class="stat-grid">
+      <div class="glass flat stat neg"><small>Erros abertos</small><b class="num" id="eAbertos">–</b></div>
+      <div class="glass flat stat"><small>Ocorrências (7 dias)</small><b class="num" id="eSemana">–</b></div>
+      <div class="glass flat stat"><small>Apps afetados</small><b class="num" id="eApps">–</b></div>
+      <div class="glass flat stat"><small>Último erro</small><b class="num" id="eUltimo">–</b></div>
+    </div>
+
+    <div class="sec-h"><b>Relatórios de erro</b></div>
+    <p class="lede" style="margin:-4px 2px 12px;font-size:13px">Agrupados pelo mesmo erro e enviados com permissão dos testadores (Modo testador ou "Enviar relatório"). Só dados técnicos: mensagem limpa, arquivo e linha, versão e navegador.</p>
+    <div class="glass aviso" id="msgErros" role="status" aria-live="polite"></div>
+    <div class="filtros">
+      <div class="seg" id="fErroStatus" role="group" aria-label="Status do erro"><span class="ind"></span>
+        <button type="button" data-v="abertos" aria-pressed="true">Abertos</button>
+        <button type="button" data-v="todos" aria-pressed="false">Todos</button>
+        <button type="button" data-v="resolvidos" aria-pressed="false">Resolvidos</button>
+      </div>
+      <div class="linha dois">
+        <select class="select" id="fErroApp" aria-label="App"><option value="">Todos os apps</option></select>
+        <select class="select" id="fErroVersao" aria-label="Versão"><option value="">Todas as versões</option></select>
+      </div>
+    </div>
+    <div class="lista" id="listaErros"></div>
+  </section>
+
+  <p class="note">Protegido por reCAPTCHA. Valem a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidade</a> e os <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Termos</a> do Google.</p>
 </main>
+</div>
+
+<div class="snack" id="snack" role="status" aria-live="polite"><span id="snackT"></span><button type="button" id="desfazer">Desfazer</button></div>
+<div class="toast glass" id="toast" role="status" aria-live="polite"><i></i><span id="toastT"></span></div>
+
+<noscript><p class="lede" style="text-align:center;padding:40px 16px">Ative o JavaScript para usar o painel.</p></noscript>
 <script src="stk-pkg-financ-icons.js"></script>
 <script src="painel-core.js"></script>
 <script src="app.js" type="module"></script>
