@@ -232,7 +232,7 @@
   }
 
   // ==========================================
-  // VISÃO AERO 3.0: tendência, gráfico, ilha e "Pergunte ao painel"
+  // VISÃO AERO 3.0: tendência, gráfico e ilha
   // ==========================================
   const DIA = 24 * 60 * 60 * 1000;
   const ms = (d) => (d instanceof Date ? d.getTime() : typeof d === 'number' ? d : 0);
@@ -268,52 +268,6 @@
     const novas = (sugestoes || []).filter((s) => !s.lida).sort((a, b) => ms(b.criadoEm) - ms(a.criadoEm));
     if (novas.length) return { tipo: 'sugestoes', total: novas.length, app: novas[0].app, quando: novas[0].criadoEm };
     return { tipo: 'em-dia' };
-  }
-
-  // Respostas calculadas com os dados (sem rede). Devolve trechos [texto, negrito] para a interface
-  // montar com textContent: nada vindo do Firestore vira HTML.
-  function responderPergunta(pergunta, dados) {
-    const t = service._removeAcentos(pergunta || '');
-    const { avaliacoes = [], sugestoes = [], erros = [], agora } = dados || {};
-    const nome = (id) => service._dictionary.getNomeApp(id);
-    const porApp = Object.keys(service._dictionary.apps).map((id) => {
-      const ns = notasValidas(avaliacoes).filter((a) => a.app === id).map((a) => a.nota);
-      return { id, n: ns.length, m: mediaDe(ns) };
-    }).filter((x) => x.n);
-    const med = (m) => service.formatarMedia(m);
-    if (/pior|baixa|menor/.test(t) && porApp.length) {
-      const p = porApp.sort((a, b) => a.m - b.m)[0];
-      return [['A menor média é do '], [nome(p.id), true], [': '], [med(p.m), true], [` em ${p.n} ${p.n === 1 ? 'avaliação' : 'avaliações'}.`]];
-    }
-    if (/melhor|maior nota/.test(t) && porApp.length) {
-      const p = porApp.sort((a, b) => b.m - a.m)[0];
-      return [['A maior média é do '], [nome(p.id), true], [': '], [med(p.m), true], [` em ${p.n} ${p.n === 1 ? 'avaliação' : 'avaliações'}.`]];
-    }
-    if (/tendenc|evolu|subiu|caiu|melhorou|piorou/.test(t)) {
-      const r = porApp.map((x) => ({ id: x.id, td: tendencia(avaliacoes.filter((a) => a.app === x.id), agora) })).filter((x) => x.td);
-      if (!r.length) return [['Ainda não há avaliações suficientes para comparar os últimos 30 dias com os 30 anteriores.']];
-      const up = r.filter((x) => x.td.d > 0.05).map((x) => nome(x.id)), dn = r.filter((x) => x.td.d < -0.05).map((x) => nome(x.id));
-      const out = [];
-      if (up.length) out.push(['Subiram: '], [up.join(', '), true], ['. ']);
-      if (dn.length) out.push(['Caíram: '], [dn.join(', '), true], ['.']);
-      else out.push(['Nenhum app caiu nos últimos 30 dias.']);
-      return out;
-    }
-    if (/erro/.test(t)) {
-      const a = agruparErros(erros, { status: 'abertos' });
-      if (!a.length) return [['Nenhum erro aberto agora.']];
-      const g = a.slice().sort((x, y) => y.vezes - x.vezes)[0];
-      return [['Sim, '], [String(a.length), true], [a.length === 1 ? ' erro aberto. ' : ' erros abertos. '], ['O mais frequente é no '], [`${nome(g.app)} v${g.versao || '?'}`, true], [` (${g.vezes}×).`]];
-    }
-    if (/pedem|sugest|mais/.test(t)) {
-      const cont = {};
-      sugestoes.filter((s) => s.tipo === 'sugestao').forEach((s) => { cont[s.app] = (cont[s.app] || 0) + 1; });
-      const top = Object.entries(cont).sort((a, b) => b[1] - a[1])[0];
-      if (!top) return [['Ainda não há sugestões.']];
-      const novas = sugestoes.filter((s) => !s.lida).length;
-      return [['O '], [nome(top[0]), true], [` recebe mais sugestões (${top[1]}). ${novas} ${novas === 1 ? 'ainda está' : 'ainda estão'} sem leitura.`]];
-    }
-    return [['Posso responder sobre notas por app, tendência, sugestões e erros.']];
   }
 
   // Link para abrir issue no GitHub com os dados técnicos do grupo de erros.
@@ -373,7 +327,6 @@
     tendencia,
     mediasSemanais,
     destaque,
-    responderPergunta,
     linkIssue,
     iniciais,
     REPOS,
