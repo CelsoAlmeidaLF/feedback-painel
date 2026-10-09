@@ -31,6 +31,15 @@ O painel abre pelo kit de segurança (`PACOTES/stk-pkg-security`), como os outro
 - **Menu ⋮ → Configurações:** PIN, senha no lugar do PIN, biometria, bloqueio automático e código de recuperação (do kit), mais a seção **Conta do painel**: e-mail e senha guardados (testa o login antes de salvar), trocar a senha da conta no Firebase (10+ caracteres; atualiza o cofre), esquecer e-mail e senha deste aparelho, sair da conta.
 - **Risco aceito:** com o celular nas mãos, alguém pode tentar adivinhar o PIN de 6 números fora do app (horas, não anos). Para a senha do painel ficar mais protegida, use **Configurações → Usar senha em vez de PIN** com uma frase longa.
 
+## Instalar no celular (v1.5.0)
+
+O painel é um PWA: `manifest.json`, ícones Aero (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon-32.png`) e `sw.js`, registrado pelo kit de segurança.
+
+- **Android (Chrome):** menu ⋮ do painel → Configurações → **Instalar app**, ou menu do Chrome → **Instalar app** / "Adicionar à tela inicial".
+- **iPhone (Safari):** Compartilhar → **Adicionar à Tela de Início**.
+- O service worker busca **primeiro na rede**: versão nova vale na hora; sem internet, a tela abre do cache (os dados precisam de rede). Firebase e Google nunca passam pelo cache.
+- Ao mudar arquivos do app, troque `data-vault-version` no `index.html` e `CACHE_NAME` no `sw.js` (o teste `pwa.test.js` confere).
+
 ## Estrutura
 
 ```
@@ -53,4 +62,4 @@ cd src && python3 -m http.server 8780      # abrir http://localhost:8780 (localh
 
 Publicação: GitHub Pages pelo workflow `.github/workflows/static.yml` (pasta `src`).
 
-Versão atual: **1.4.0** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 24 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.
+Versão atual: **1.5.0** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 26 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.

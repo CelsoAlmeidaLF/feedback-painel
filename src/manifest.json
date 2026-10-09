@@ -1,0 +1,18 @@
+{
+  "name": "Feedback dos apps",
+  "short_name": "Feedback",
+  "description": "Avaliações, sugestões e relatórios de erro dos apps, protegidos pelo PIN e pela biometria",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "pt-BR",
+  "background_color": "#EAF2FB",
+  "theme_color": "#DCEBFA",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
