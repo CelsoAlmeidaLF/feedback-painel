@@ -43,4 +43,4 @@ cd src && python3 -m http.server 8780      # abrir http://localhost:8780 (localh
 
 Publicação: GitHub Pages pelo workflow `.github/workflows/static.yml` (pasta `src`).
 
-Versão atual: **1.3.0** (`data-version` no `index.html`), no ar só no DEV. Situação em 09/10/2026: 19 testes passando.
+Versão atual: **1.3.0** (`data-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 19 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.
