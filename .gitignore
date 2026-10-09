@@ -21,3 +21,6 @@ secrets*.json
 *.bak
 *.csv
 node_modules/
+
+# Firebase Hosting (cache local do deploy)
+.firebase/

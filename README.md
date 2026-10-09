@@ -34,6 +34,12 @@ O painel abre pelo kit de segurança (`PACOTES/stk-pkg-security`), como os outro
 - **Menu ⋮ → Configurações:** PIN, senha no lugar do PIN, biometria, bloqueio automático e código de recuperação (do kit), mais a seção **Conta do painel**: **Entrar de novo com e-mail e senha** (faz o login e guarda no cofre), trocar a senha da conta no Firebase (10+ caracteres; atualiza o cofre), esquecer e-mail e senha deste aparelho, sair da conta.
 - **Risco aceito:** com o celular nas mãos, alguém pode tentar adivinhar o PIN de 6 números fora do app (horas, não anos). Para a senha do painel ficar mais protegida, use **Configurações → Usar senha em vez de PIN** com uma frase longa.
 
+## Endereços
+
+- **Firebase Hosting (para instalar no celular):** https://systekna-feedback.web.app — domínio próprio, como o Finanças da Casa. Publicar: `npx -y firebase-tools deploy --only hosting --project systekna-feedback` (usa `firebase.json`; só hospedagem, não mexe nas regras).
+- **GitHub Pages (DEV):** https://celsoalmeidalf.github.io/feedback-painel — continua no ar pelo workflow.
+- Cada endereço tem o próprio cofre: no `web.app` o PIN é criado de novo e o login é feito uma vez.
+
 ## Instalar no celular (v1.5.0)
 
 O painel é um PWA: `manifest.json`, ícones Aero (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon-32.png`) e `sw.js`, registrado pelo kit de segurança.
