@@ -288,6 +288,37 @@
     return `https://github.com/${repo}/issues/new?labels=bug&title=${encodeURIComponent(titulo)}&body=${encodeURIComponent(corpo.slice(0, 6000))}`;
   }
 
+  // ==========================================
+  // CONTA DO PAINEL GUARDADA NO COFRE (stk-pkg-secure-vault)
+  // ==========================================
+  const CHAVE_CONTA = 'painel:conta';
+  const emailOK = (e) => (new Suggestion({ email: e })).isEmailValid();
+  // Texto para o cofre; o cofre cifra (AES-GCM, chave do PIN/biometria).
+  function gravarCredenciais(email, senha) {
+    const e = String(email || '').trim(), s = String(senha || '');
+    if (!emailOK(e)) throw new Error('E-mail inválido.');
+    if (!s || s.length > 256) throw new Error('Senha inválida.');
+    return JSON.stringify({ v: 1, email: e, senha: s });
+  }
+  // Lê o que está no cofre; qualquer coisa fora do formato vira null (não tenta entrar).
+  function lerCredenciais(texto) {
+    if (typeof texto !== 'string' || !texto) return null;
+    try {
+      const o = JSON.parse(texto);
+      if (!o || o.v !== 1 || typeof o.email !== 'string' || typeof o.senha !== 'string') return null;
+      if (!emailOK(o.email) || !o.senha || o.senha.length > 256) return null;
+      return { email: o.email, senha: o.senha };
+    } catch (_) { return null; }
+  }
+  // Regra da senha nova: 10+ caracteres, igual nas duas vezes, diferente da atual. Devolve '' se estiver ok.
+  function problemaSenhaNova(nova, repetida, atual) {
+    if (String(nova || '').length < 10) return 'A nova senha precisa de pelo menos 10 caracteres.';
+    if (nova.length > 256) return 'A nova senha pode ter no máximo 256 caracteres.';
+    if (nova !== repetida) return 'As duas senhas novas não são iguais.';
+    if (atual && nova === atual) return 'A nova senha precisa ser diferente da atual.';
+    return '';
+  }
+
   // Duas letras para o avatar, a partir do e-mail (ex.: celso.almeida@… → CA).
   function iniciais(email) {
     const partes = String(email || '').split('@')[0].split(/[._\-+]+/).filter(Boolean);
@@ -329,6 +360,10 @@
     destaque,
     linkIssue,
     iniciais,
+    CHAVE_CONTA,
+    gravarCredenciais,
+    lerCredenciais,
+    problemaSenhaNova,
     REPOS,
     TIPO_ERRO,
 
