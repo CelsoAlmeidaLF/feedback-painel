@@ -21,6 +21,16 @@ Segue o template `PACOTES/stk-pkg-design-system/painel-feedback-aero3.html`: vid
 - **Desfazer:** excluir sugestão ou erro mostra "Desfazer" por 4,5 s; só então o documento é apagado no Firestore.
 - **Erros:** botão **Issue** abre uma issue no repositório do app no GitHub com os dados técnicos.
 
+## Cofre, PIN e biometria (v1.4.0)
+
+O painel abre pelo kit de segurança (`PACOTES/stk-pkg-security`), como os outros apps:
+
+- **Abrir:** PIN FINANC (o mesmo dos apps no endereço `celsoalmeidalf.github.io`) ou biometria. Sem desbloquear, nada aparece.
+- **Entrar sozinho:** no primeiro login, com "Guardar e-mail e senha neste aparelho" marcado, a conta vai para o cofre (`secureStorage`, chave `painel:conta`), cifrado com AES-GCM por chave derivada do PIN (PBKDF2 600 mil) ou da biometria. Nos próximos desbloqueios o painel lê o cofre e entra no Firebase sem digitar nada.
+- **Sessão do Firebase só na memória** (`inMemoryPersistence`): fechar a aba ou bloquear derruba o login. O token que as versões antigas guardavam sem cifra (`firebaseLocalStorageDb`) é apagado.
+- **Menu ⋮ → Configurações:** PIN, senha no lugar do PIN, biometria, bloqueio automático e código de recuperação (do kit), mais a seção **Conta do painel**: e-mail e senha guardados (testa o login antes de salvar), trocar a senha da conta no Firebase (10+ caracteres; atualiza o cofre), esquecer e-mail e senha deste aparelho, sair da conta.
+- **Risco aceito:** com o celular nas mãos, alguém pode tentar adivinhar o PIN de 6 números fora do app (horas, não anos). Para a senha do painel ficar mais protegida, use **Configurações → Usar senha em vez de PIN** com uma frase longa.
+
 ## Estrutura
 
 ```
@@ -30,6 +40,7 @@ src/painel-core.js  regras puras: resumo, filtros, CSV, datas, agrupamento de er
                     ilha e link de issue (testadas)
 src/painel.css      design Aero 3.0 (tokens claro/escuro/luz ambiente e componentes)
 src/fonts/          Open Sans variável + licença OFL
+src/stk-pkg-*       kit de segurança e ícones (cópias de PACOTES/stk-pkg-security; não editar aqui)
 test/               node --test
 ```
 
@@ -42,4 +53,4 @@ cd src && python3 -m http.server 8780      # abrir http://localhost:8780 (localh
 
 Publicação: GitHub Pages pelo workflow `.github/workflows/static.yml` (pasta `src`).
 
-Versão atual: **1.3.1** (`data-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 18 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.
+Versão atual: **1.4.0** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 24 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.

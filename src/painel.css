@@ -348,3 +348,31 @@ details.pilha pre{margin:6px 0 0;padding:12px 14px;border-radius:12px;font:12px/
 .entrar .msg.err{color:var(--out)}
 .entrar .msg.ok{color:var(--in)}
 .entrar .ib{margin-left:auto}
+
+/* ───────── Kit de segurança (PIN, biometria, menu ⋮, Configurações) nas cores do Aero ───────── */
+:root{--bg:var(--page);--surface:#F7FAFE;--surface-2:#FFFFFF;--ink-dim:var(--soft);--down:var(--out)}
+:root[data-mode="dark"]{--surface:#13233D;--surface-2:#1B2F4F}
+#vaultGate,.vault-dialog,.fs-sheet,.vp-drawer{font-family:var(--font)}
+#vaultGate button,.vault-dialog button,#vaultProfileBtn,.vp-drawer button,.vault-eyebrow,#vaultGate .vault-keypad button{font-family:var(--font)}
+html.vault-locked body{background:var(--sky)}
+#vaultGate{box-shadow:var(--thick),var(--e3);border:0}
+#vaultGate .vault-primary{color:#fff;background:var(--gloss);border:0;box-shadow:var(--gloss-edge),0 12px 24px -12px rgba(26,122,212,.85)}
+.vp-bar{display:flex;flex:none}
+#vaultProfileBtn{width:42px;height:42px;border:0;background:var(--glass);box-shadow:var(--thick),var(--e1);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+
+/* ───────── Entrar: guardar no cofre ───────── */
+.lembrar{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.4;color:var(--soft);cursor:pointer}
+.lembrar input{flex:none;width:20px;height:20px;margin:0;accent-color:var(--accent)}
+
+/* ───────── Janelas de conta e senha ───────── */
+.dlg{width:min(calc(100vw - 32px),420px);max-width:none;padding:0;border:0;color:var(--ink);background:linear-gradient(180deg,var(--glass-top),var(--glass-strong))}
+:root[data-mode="dark"] .dlg{background:rgba(18,32,56,.94)}
+.dlg::backdrop{background:rgba(8,18,34,.45);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.dlg form{display:grid;gap:14px;padding:22px}
+.dlg h2{margin:0;font:600 19px/1.25 var(--font)}
+.dlg .lede{font-size:13px}
+.dlg .msg{min-height:18px;margin:0;font-size:13px;color:var(--soft)}
+.dlg .msg.err{color:var(--out)} .dlg .msg.ok{color:var(--in)}
+.dlg-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#vaultGate *,.vault-dialog *,.fs-sheet *,.vp-drawer *{font-family:var(--font)!important}
+#vaultGate .vault-code,.vault-dialog .vault-code,#vaultRecovery{font-family:ui-monospace,Menlo,Consolas,monospace!important}

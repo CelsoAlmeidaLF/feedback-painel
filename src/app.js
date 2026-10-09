@@ -1,11 +1,14 @@
 /* Painel de feedback — design Aero 3.0, com avaliações, sugestões e relatórios de erro do Firestore (projeto systekna-feedback).
-   Login por e-mail e senha; só a conta dona (UID nas regras) lê, marca como lida e apaga.
+   Abre pelo cofre do kit de segurança (PIN FINANC ou biometria). O e-mail e a senha da conta ficam cifrados no cofre
+   e o painel entra sozinho depois do desbloqueio; a sessão do Firebase fica só na memória.
+   Só a conta dona (UID nas regras) lê, marca como lida e apaga.
    Texto vindo dos usuários é sempre inserido com textContent, nunca como HTML. */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js';
 import {
-  initializeAuth, browserLocalPersistence, onAuthStateChanged,
+  initializeAuth, inMemoryPersistence, onAuthStateChanged,
   signInWithEmailAndPassword, sendPasswordResetEmail, signOut,
+  EmailAuthProvider, reauthenticateWithCredential, updatePassword,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, writeBatch,
@@ -21,8 +24,11 @@ const app = initializeApp({
   appId: '1:870927975015:web:0576bd5e3cdd8d067d8ac2',
 });
 initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider('6LehydgtAAAAAOqkwKOQPzg2m0CZwYTRZSXPeyyx'), isTokenAutoRefreshEnabled: true });
-// initializeAuth sem popup/redirect: não carrega iframe do Firebase (CSP mais curta)
-const auth = initializeAuth(app, { persistence: browserLocalPersistence });
+// initializeAuth sem popup/redirect: não carrega iframe do Firebase (CSP mais curta).
+// Sessão só na memória: fechar ou bloquear derruba o login; quem abre de novo é o cofre (PIN/biometria).
+const auth = initializeAuth(app, { persistence: inMemoryPersistence });
+// Até a v1.3 o token de login ficava salvo sem cifra no navegador: apaga o que sobrou.
+try { indexedDB.deleteDatabase('firebaseLocalStorageDb'); } catch (_) {}
 const db = getFirestore(app);
 
 // Não abre dentro de iframe de outro site
@@ -121,7 +127,9 @@ const UiEvents = {
     const b = $('btnEntrar');
     b.disabled = true; msg($('msgEntrar'), 'Entrando…');
     try {
-      await signInWithEmailAndPassword(auth, $('email').value.trim(), $('senha').value);
+      const email = $('email').value.trim(), senha = $('senha').value;
+      await signInWithEmailAndPassword(auth, email, senha);
+      if ($('guardar').checked) { secureStorage.setItem(C.CHAVE_CONTA, C.gravarCredenciais(email, senha)); toast('E-mail e senha guardados no cofre'); }
       $('senha').value = '';
       msg($('msgEntrar'), '');
     } catch (err) {
@@ -134,11 +142,10 @@ const UiEvents = {
     try { await sendPasswordResetEmail(auth, email); } catch (_) { /* não revela se a conta existe */ }
     msg($('msgEntrar'), 'Se o e-mail tiver conta, o link para criar uma nova senha chega em alguns minutos (veja também o spam).', 'ok');
   },
-  btnSair_click: () => { if (confirmarFn) { const f = confirmarFn; confirmarFn = null; f(); } signOut(auth); },
+  sair: () => { if (confirmarFn) { const f = confirmarFn; confirmarFn = null; f(); } saiu = true; signOut(auth); },
 };
 $('formEntrar').addEventListener('submit', UiEvents.formEntrar_submit);
 $('btnEsqueci').addEventListener('click', UiEvents.btnEsqueci_click);
-$('btnSair').addEventListener('click', UiEvents.btnSair_click);
 
 // ═════ Dados ao vivo ═════
 let avaliacoes = [], sugestoes = [], erros = [], carregou = false, pararAval = null, pararSug = null, pararErros = null;
@@ -146,13 +153,17 @@ const ocultos = new Set(); // ids esperando o "Desfazer" expirar
 const filtro = { status: 'novas', tipo: '', app: '', busca: '' };
 const filtroErro = { status: 'abertos', app: '', versao: '' };
 
+// ═════ Cofre: só depois do PIN/biometria o painel tenta entrar ═════
+let saiu = false;
+await window.vaultReady;
+secoesConfiguracoes();
 onAuthStateChanged(auth, (user) => {
   $('telaEntrar').hidden = !!user;
   $('telaPainel').hidden = !user;
   if (pararAval) pararAval(); if (pararSug) pararSug(); if (pararErros) pararErros();
   pararAval = pararSug = pararErros = null;
   avaliacoes = []; sugestoes = []; erros = []; carregou = false; ocultos.clear();
-  if (!user) { $('email').focus(); return; }
+  if (!user) { entrarSozinho(); return; }
   $('avatar').textContent = C.iniciais(user.email);
   $('avatar').title = user.email;
   const h = new Date().getHours();
@@ -486,4 +497,89 @@ function esqueleto() {
   for (let i = 0; i < 2; i++) { const d = el('div', 'glass flat app-c'), e = el('div', 'esq'); e.style.height = '140px'; d.append(e); a.append(d); }
   const l = $('listaSug'); l.replaceChildren();
   for (let i = 0; i < 2; i++) { const d = el('div', 'glass flat msg-c'), n = el('div', 'inner'), e = el('div', 'esq'); e.style.height = '86px'; n.append(e); d.append(n); l.append(d); }
+}
+
+// ═════ Entrar com o que está no cofre ═════
+let tentouCofre = false;
+async function entrarSozinho() {
+  const conta = C.lerCredenciais(secureStorage.getItem(C.CHAVE_CONTA));
+  if (conta) $('email').value = conta.email;
+  if (!conta || saiu || tentouCofre) { (conta ? $('senha') : $('email')).focus(); return; }
+  tentouCofre = true;
+  $('btnEntrar').disabled = true; msg($('msgEntrar'), 'Entrando com a conta guardada…');
+  try { await signInWithEmailAndPassword(auth, conta.email, conta.senha); msg($('msgEntrar'), ''); }
+  catch (err) {
+    msg($('msgEntrar'), err.code === 'auth/invalid-credential'
+      ? 'A senha guardada não funciona mais. Digite a senha atual para entrar e guardar de novo.'
+      : (ERROS_LOGIN[err.code] || 'Não foi possível entrar. Tente de novo.'), 'err');
+    $('senha').focus();
+  } finally { $('btnEntrar').disabled = false; }
+}
+
+// ═════ Configurações: seção "Conta do painel" (menu ⋮ e tela de Configurações do kit) ═════
+function secoesConfiguracoes() {
+  FinancSettings.addSection({ title: 'Conta do painel', rows: [
+    { icon: 'user', label: 'E-mail e senha', description: 'O que fica guardado no cofre deste aparelho para entrar sozinho.', onClick: abrirConta },
+    { icon: 'key', label: 'Trocar a senha da conta', description: 'Muda a senha de login do painel no Firebase.', onClick: abrirSenha },
+    { icon: 'trash', label: 'Esquecer e-mail e senha', description: 'Apaga só deste aparelho. A conta continua igual.', danger: true, onClick: esquecerConta },
+    { icon: 'arrow-left', label: 'Sair da conta', description: 'Volta para a tela de entrar até o próximo desbloqueio.', onClick: UiEvents.sair },
+  ] });
+}
+function abrirDialogo(d) { d.querySelector('form').reset(); d.querySelectorAll('.msg').forEach((m) => msg(m, '')); d.showModal(); }
+document.querySelectorAll('.dlg [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+
+function abrirConta() {
+  const d = $('dlgConta'); abrirDialogo(d);
+  const conta = C.lerCredenciais(secureStorage.getItem(C.CHAVE_CONTA));
+  $('contaEmail').value = conta ? conta.email : (auth.currentUser ? auth.currentUser.email : '');
+  msg($('msgConta'), conta ? 'Guardado: ' + conta.email + '. Para trocar, digite o e-mail e a senha novos.' : 'Nada guardado neste aparelho ainda.');
+  (conta ? $('contaSenha') : $('contaEmail')).focus();
+}
+$('formConta').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('contaEmail').value.trim(), senha = $('contaSenha').value;
+  let texto;
+  try { texto = C.gravarCredenciais(email, senha); } catch (err) { msg($('msgConta'), err.message, 'err'); return; }
+  const b = $('btnSalvarConta'); b.disabled = true; msg($('msgConta'), 'Testando o login…');
+  try {
+    await signInWithEmailAndPassword(auth, email, senha); // só guarda o que funciona
+    secureStorage.setItem(C.CHAVE_CONTA, texto);
+    saiu = false; $('dlgConta').close(); toast('E-mail e senha guardados no cofre');
+  } catch (err) { msg($('msgConta'), ERROS_LOGIN[err.code] || 'Não foi possível entrar com esses dados.', 'err'); }
+  finally { b.disabled = false; $('contaSenha').value = ''; }
+});
+
+function abrirSenha() {
+  if (!auth.currentUser) { toast('Entre na conta primeiro'); return; }
+  const d = $('dlgSenha'); abrirDialogo(d);
+  const conta = C.lerCredenciais(secureStorage.getItem(C.CHAVE_CONTA));
+  $('senhaAtualCampo').hidden = !!conta; // com a senha no cofre, não precisa digitar a atual
+  (conta ? $('senhaNova') : $('senhaAtual')).focus();
+}
+$('formSenha').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const user = auth.currentUser;
+  if (!user) { msg($('msgSenha'), 'A sessão terminou. Entre de novo.', 'err'); return; }
+  const conta = C.lerCredenciais(secureStorage.getItem(C.CHAVE_CONTA));
+  const atual = conta ? conta.senha : $('senhaAtual').value, nova = $('senhaNova').value;
+  const problema = !atual ? 'Digite a senha atual.' : C.problemaSenhaNova(nova, $('senhaNova2').value, atual);
+  if (problema) { msg($('msgSenha'), problema, 'err'); return; }
+  const b = $('btnSalvarSenha'); b.disabled = true; msg($('msgSenha'), 'Trocando…');
+  try {
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, atual));
+    await updatePassword(user, nova);
+    if (conta) secureStorage.setItem(C.CHAVE_CONTA, C.gravarCredenciais(conta.email, nova));
+    $('dlgSenha').close(); toast(conta ? 'Senha trocada e atualizada no cofre' : 'Senha trocada');
+  } catch (err) {
+    msg($('msgSenha'), err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password'
+      ? (conta ? 'A senha guardada no cofre não confere. Atualize em "E-mail e senha".' : 'Senha atual incorreta.')
+      : err.code === 'auth/weak-password' ? 'O Firebase recusou a nova senha por ser fraca.'
+      : ERROS_LOGIN[err.code] || 'Não foi possível trocar a senha.', 'err');
+  } finally { b.disabled = false; ['senhaAtual', 'senhaNova', 'senhaNova2'].forEach((id) => { $(id).value = ''; }); }
+});
+
+function esquecerConta() {
+  if (!secureStorage.getItem(C.CHAVE_CONTA)) { toast('Nada guardado neste aparelho'); return; }
+  secureStorage.removeItem(C.CHAVE_CONTA);
+  toast('E-mail e senha apagados deste aparelho');
 }

@@ -180,3 +180,30 @@ test('avatar: iniciais a partir do e-mail', () => {
   assert.equal(C.iniciais('dono@x.com'), 'DO');
   assert.equal(C.iniciais(''), '?');
 });
+
+// ───────── Conta guardada no cofre ─────────
+test('conta: grava e lê e-mail e senha no formato do cofre', () => {
+  const t = C.gravarCredenciais('  dono@hotmail.com ', 'senha com espaço e "aspas"');
+  assert.deepEqual(JSON.parse(t), { v: 1, email: 'dono@hotmail.com', senha: 'senha com espaço e "aspas"' });
+  assert.deepEqual(C.lerCredenciais(t), { email: 'dono@hotmail.com', senha: 'senha com espaço e "aspas"' });
+  assert.throws(() => C.gravarCredenciais('sem-arroba', 'x'), /E-mail inválido/);
+  assert.throws(() => C.gravarCredenciais('a@b.co', ''), /Senha inválida/);
+  assert.throws(() => C.gravarCredenciais('a@b.co', 'x'.repeat(257)), /Senha inválida/);
+  assert.equal(C.CHAVE_CONTA, 'painel:conta');
+});
+
+test('conta: conteúdo fora do formato não vira login', () => {
+  for (const ruim of [null, '', 'não é json', '{}', '[]', JSON.stringify({ v: 2, email: 'a@b.co', senha: 'x' }),
+    JSON.stringify({ v: 1, email: 'invalido', senha: 'x' }), JSON.stringify({ v: 1, email: 'a@b.co', senha: '' }),
+    JSON.stringify({ v: 1, email: 'a@b.co', senha: 5 })]) {
+    assert.equal(C.lerCredenciais(ruim), null, String(ruim));
+  }
+});
+
+test('conta: regras da senha nova', () => {
+  assert.match(C.problemaSenhaNova('curta', 'curta', ''), /10 caracteres/);
+  assert.match(C.problemaSenhaNova('x'.repeat(257), 'x'.repeat(257), ''), /256/);
+  assert.match(C.problemaSenhaNova('senha-nova-1', 'senha-nova-2', ''), /não são iguais/);
+  assert.match(C.problemaSenhaNova('mesma-senha-10', 'mesma-senha-10', 'mesma-senha-10'), /diferente da atual/);
+  assert.equal(C.problemaSenhaNova('senha-nova-boa', 'senha-nova-boa', 'antiga-1234'), '');
+});
