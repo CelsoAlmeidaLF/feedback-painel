@@ -128,6 +128,7 @@ const UiEvents = {
     b.disabled = true; msg($('msgEntrar'), 'Entrando…');
     try {
       const email = $('email').value.trim(), senha = $('senha').value;
+      saiu = false;
       await signInWithEmailAndPassword(auth, email, senha);
       if ($('guardar').checked) { secureStorage.setItem(C.CHAVE_CONTA, C.gravarCredenciais(email, senha)); toast('E-mail e senha guardados no cofre'); }
       $('senha').value = '';
@@ -158,13 +159,27 @@ let saiu = false;
 await window.vaultReady;
 secoesConfiguracoes();
 onAuthStateChanged(auth, (user) => {
-  $('telaEntrar').hidden = !!user;
-  $('telaPainel').hidden = !user;
+  // O painel só aparece depois que o Firestore confirma o acesso de dono (leitura de sugestões).
+  // Sem login, ou com login sem acesso, fica na tela de entrar.
+  $('telaPainel').hidden = true;
+  $('telaEntrar').hidden = false;
   if (pararAval) pararAval(); if (pararSug) pararSug(); if (pararErros) pararErros();
   pararAval = pararSug = pararErros = null;
   avaliacoes = []; sugestoes = []; erros = []; carregou = false; ocultos.clear();
   statusLogin(user);
   if (!user) { entrarSozinho(); return; }
+  $('btnEntrar').disabled = true;
+  msg($('msgEntrar'), 'Conferindo o acesso de dono…');
+  const doc2 = (d) => ({ id: d.id, ...d.data(), criadoEm: d.data().criadoEm ? d.data().criadoEm.toDate() : null });
+  let liberado = false;
+  pararSug = onSnapshot(query(collection(db, 'sugestoes'), orderBy('criadoEm', 'desc')),
+    (snap) => { sugestoes = snap.docs.map(doc2); if (!liberado) { liberado = true; liberar(user, doc2); } else { carregou = true; renderFeedback(); } },
+    (err) => (liberado ? falha(err) : negado(user, err)));
+});
+// Acesso de dono confirmado: abre o painel e liga avaliações e erros.
+function liberar(user, doc2) {
+  $('btnEntrar').disabled = false; msg($('msgEntrar'), '');
+  $('telaEntrar').hidden = true; $('telaPainel').hidden = false;
   $('avatar').textContent = C.iniciais(user.email);
   $('avatar').title = user.email;
   const h = new Date().getHours();
@@ -172,28 +187,32 @@ onAuthStateChanged(auth, (user) => {
   msg($('msgPainel'), ''); msg($('msgErros'), '');
   esqueleto();
   requestAnimationFrame(() => { moverVisao(); moverStatus(); });
-  const doc2 = (d) => ({ id: d.id, ...d.data(), criadoEm: d.data().criadoEm ? d.data().criadoEm.toDate() : null });
+  carregou = true; renderFeedback();
   pararAval = onSnapshot(collection(db, 'avaliacoes'),
-    (snap) => { avaliacoes = snap.docs.map(doc2); carregou = true; renderFeedback(); },
-    (err) => falha(err));
-  pararSug = onSnapshot(query(collection(db, 'sugestoes'), orderBy('criadoEm', 'desc')),
-    (snap) => { sugestoes = snap.docs.map(doc2); carregou = true; renderFeedback(); },
+    (snap) => { avaliacoes = snap.docs.map(doc2); renderFeedback(); },
     (err) => falha(err));
   pararErros = onSnapshot(query(collection(db, 'erros'), orderBy('criadoEm', 'desc')),
     (snap) => { erros = snap.docs.map(doc2); renderErros(); ilha(); },
     (err) => msg($('msgErros'), err && err.code === 'permission-denied'
       ? 'Sem acesso aos erros. Publique as regras do Firestore com a coleção "erros".'
       : 'Não foi possível carregar os erros. Verifique a conexão e recarregue a página.', 'err'));
-});
+}
+// Login feito, mas o Firestore não reconhece esta conta como dona: sai da conta e explica na tela de entrar.
+async function negado(user, err) {
+  const semAcesso = err && err.code === 'permission-denied';
+  const texto = semAcesso
+    ? `A conta ${user.email} (UID ${user.uid}) entrou, mas o Firestore não a reconhece como dona do painel. `
+      + 'Se esta é a sua conta, a regra dono() está com outro UID: publique as regras corrigidas. Se não for, entre com a conta certa.'
+    : 'Não foi possível conferir o acesso. Verifique a conexão e tente de novo.';
+  saiu = true; // não tenta entrar sozinho de novo até você pedir
+  try { await signOut(auth); } catch (_) {}
+  $('btnEntrar').disabled = false;
+  msg($('msgEntrar'), texto, 'err');
+}
 function falha(err) {
-  const alvo = $('msgPainel'), u = auth.currentUser;
-  if (!(err && err.code === 'permission-denied')) { msg(alvo, 'Não foi possível carregar os dados. Verifique a conexão e recarregue a página.', 'err'); return; }
-  // Mostra quem está conectado: se for o dono, o problema está na regra do Firestore (UID em dono()), não no login.
-  msg(alvo, `Você está conectado como ${u ? u.email : '?'} (UID ${u ? u.uid : '?'}), mas o Firestore recusou a leitura. `
-    + 'Se esta é a sua conta, a regra dono() está com outro UID: publique as regras corrigidas. Se não for, entre de novo com a conta certa.', 'err');
-  const b = el('button', 'btn btn-secondary btn-sm', 'Entrar de novo'); b.type = 'button';
-  b.addEventListener('click', abrirConta);
-  alvo.append(b);
+  msg($('msgPainel'), err && err.code === 'permission-denied'
+    ? 'O Firestore deixou de reconhecer esta conta como dona. Feche e abra o painel de novo.'
+    : 'Não foi possível carregar os dados. Verifique a conexão e recarregue a página.', 'err');
 }
 // Mostra no topo se o painel está conectado ao Firebase e com qual conta.
 function statusLogin(user) {

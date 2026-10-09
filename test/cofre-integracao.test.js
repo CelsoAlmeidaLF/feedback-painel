@@ -28,3 +28,15 @@ test('cofre: senha só vai para o secureStorage, nunca para localStorage', () =>
   const versao = html.match(/data-vault-version="(\d+\.\d+\.\d+)"/);
   assert.ok(versao, 'versão no html');
 });
+
+test('acesso: o painel só abre depois que o Firestore confirma a conta como dona', () => {
+  const ouvinte = app.slice(app.indexOf('onAuthStateChanged(auth'), app.indexOf('function liberar('));
+  assert.match(ouvinte, /\$\('telaPainel'\)\.hidden = true;/, 'começa escondido a cada mudança de login');
+  assert.doesNotMatch(ouvinte, /\$\('telaPainel'\)\.hidden = (false|!user)/, 'login sozinho não abre o painel');
+  assert.match(ouvinte, /negado\(user, err\)/, 'leitura recusada vai para negado()');
+  const mostra = [...app.matchAll(/\$\('telaPainel'\)\.hidden = false/g)].length;
+  assert.equal(mostra, 1, 'só um lugar abre o painel');
+  assert.ok(app.indexOf("$('telaPainel').hidden = false") > app.indexOf('function liberar('), 'e esse lugar é liberar()');
+  const neg = app.slice(app.indexOf('async function negado('), app.indexOf('function falha('));
+  assert.match(neg, /signOut\(auth\)/, 'acesso recusado sai da conta');
+});
