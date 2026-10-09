@@ -335,7 +335,8 @@ details.pilha pre{margin:6px 0 0;padding:12px 14px;border-radius:12px;font:12px/
 .btn.ic{flex:0 0 44px;width:44px;padding:0}
 
 /* ───────── Mensagens do sistema (falha de conexão, sem acesso) ───────── */
-.aviso{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;margin:0 0 12px;font-size:14px;line-height:1.45}
+.aviso{display:block;padding:14px 16px;margin:0 0 12px;font-size:14px;line-height:1.45}
+.aviso .btn{display:flex;margin-top:12px}
 .aviso:empty{display:none}
 .aviso.err{color:var(--out)}
 .aviso.ok{color:var(--in)}
@@ -376,3 +377,10 @@ html.vault-locked body{background:var(--sky)}
 .dlg-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 #vaultGate *,.vault-dialog *,.fs-sheet *,.vp-drawer *{font-family:var(--font)!important}
 #vaultGate .vault-code,.vault-dialog .vault-code,#vaultRecovery{font-family:ui-monospace,Menlo,Consolas,monospace!important}
+
+/* ───────── Status do login no topo ───────── */
+.status-login{display:flex;align-items:center;gap:6px;margin:2px 0 0;font-size:12px;color:var(--soft);min-width:0}
+.status-login #statusTexto{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-login .pt{width:8px;height:8px;border-radius:50%;flex:none;background:var(--faint)}
+.status-login.on .pt{background:var(--in);box-shadow:0 0 0 3px color-mix(in srgb,var(--in) 20%,transparent)}
+.status-login.on{color:var(--in)}

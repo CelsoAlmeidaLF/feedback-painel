@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="vault-locked" data-vault-version="1.5.0" data-vault-app="feedback-painel" data-vault-name="Feedback">
+<html lang="pt-BR" class="vault-locked" data-vault-version="1.5.1" data-vault-app="feedback-painel" data-vault-name="Feedback">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -65,6 +65,7 @@
     <div class="who">
       <div class="eyebrow">Feedback dos apps</div>
       <h1 id="ola">Olá</h1>
+      <p class="status-login" id="statusLogin"><span class="pt"></span><span id="statusTexto">Conectando…</span></p>
     </div>
     <button class="ib" type="button" id="btnModo" aria-label="Trocar modo: claro, escuro ou luz ambiente"></button>
   </header>
@@ -165,14 +166,14 @@
 <!-- Conta do painel: e-mail e senha guardados no cofre do aparelho -->
 <dialog class="glass dlg" id="dlgConta" aria-labelledby="dlgContaT">
   <form method="dialog" id="formConta" novalidate>
-    <h2 id="dlgContaT">E-mail e senha</h2>
-    <p class="lede">Ficam cifrados no cofre deste aparelho. O PIN ou a biometria abrem o cofre e o painel entra sozinho.</p>
+    <h2 id="dlgContaT">Entrar de novo</h2>
+    <p class="lede">Faz o login com seu e-mail e senha e guarda os dois cifrados no cofre deste aparelho. Nas próximas vezes, o PIN ou a biometria bastam.</p>
     <label class="f">E-mail<input type="email" id="contaEmail" autocomplete="username" required></label>
     <label class="f">Senha<input type="password" id="contaSenha" autocomplete="current-password" required></label>
     <p class="msg" id="msgConta" role="status" aria-live="polite"></p>
     <div class="dlg-acoes">
       <button class="btn btn-secondary" type="button" data-fechar>Cancelar</button>
-      <button class="btn btn-primary" type="submit" id="btnSalvarConta">Testar e salvar</button>
+      <button class="btn btn-primary" type="submit" id="btnSalvarConta">Entrar e guardar</button>
     </div>
   </form>
 </dialog>
