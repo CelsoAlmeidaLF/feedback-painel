@@ -122,7 +122,7 @@ test('apps: Investimentos tem nome e entra nos principais', () => {
   assert.ok(C.PRINCIPAIS.includes('INVEST'));
 });
 
-// ───────── Aero 3.0: tendência, gráfico, ilha, "Pergunte ao painel" ─────────
+// ───────── Aero 3.0: tendência, gráfico, ilha ─────────
 const AGORA = d('2026-10-09T12:00:00');
 const diasAtras = (n) => new Date(AGORA.getTime() - n * 24 * 60 * 60 * 1000);
 
@@ -160,33 +160,6 @@ test('ilha: erro aberto nas últimas 24 h vence sugestões novas', () => {
   assert.deepEqual(C.destaque([...sugs, { app: 'CRIPTO', lida: false, criadoEm: diasAtras(3) }], velho, AGORA),
     { tipo: 'sugestoes', total: 2, app: 'CAMBIO', quando: sugs[0].criadoEm });
   assert.deepEqual(C.destaque([{ lida: true }], [], AGORA), { tipo: 'em-dia' });
-});
-
-test('pergunte: respostas em trechos de texto (nada vira HTML)', () => {
-  const dados = {
-    agora: AGORA,
-    avaliacoes: [
-      { app: 'CAMBIO', nota: 5, criadoEm: diasAtras(1) }, { app: 'CAMBIO', nota: 4, criadoEm: diasAtras(40) },
-      { app: 'CRIPTO', nota: 2, criadoEm: diasAtras(1) }, { app: 'CRIPTO', nota: 4, criadoEm: diasAtras(40) },
-    ],
-    sugestoes: [
-      { app: 'LIVROCAIXA', tipo: 'sugestao', lida: false }, { app: 'LIVROCAIXA', tipo: 'sugestao', lida: true },
-      { app: 'CAMBIO', tipo: 'sugestao', lida: false }, { app: 'CAMBIO', tipo: 'problema', lida: false },
-    ],
-    erros: [{ id: '1', assinatura: 'a', app: 'CRIPTO', versao: '1.11.1', criadoEm: diasAtras(1) }, { id: '2', assinatura: 'a', app: 'CRIPTO', versao: '1.11.1', criadoEm: diasAtras(1) }],
-  };
-  const txt = (q) => C.responderPergunta(q, dados).map((p) => p[0]).join('');
-  assert.equal(txt('Qual app tem a pior nota?'), 'A menor média é do Cripto: 3,0 em 2 avaliações.');
-  assert.equal(txt('qual tem a MELHOR nota'), 'A maior média é do Câmbio: 4,5 em 2 avaliações.');
-  assert.equal(txt('Qual nota subiu ou caiu?'), 'Subiram: Câmbio. Caíram: Cripto.');
-  assert.equal(txt('Tem erro aberto?'), 'Sim, 1 erro aberto. O mais frequente é no Cripto v1.11.1 (2×).');
-  assert.equal(txt('O que pedem mais?'), 'O Livro-Caixa recebe mais sugestões (2). 3 ainda estão sem leitura.');
-  assert.match(txt('bom dia'), /^Posso responder/);
-  const partes = C.responderPergunta('pior', dados);
-  assert.ok(partes.every((p) => Array.isArray(p) && typeof p[0] === 'string'));
-  assert.deepEqual(partes[1], ['Cripto', true], 'nome do app em negrito');
-  assert.equal(C.responderPergunta('tem erro?', { erros: [] }).map((p) => p[0]).join(''), 'Nenhum erro aberto agora.');
-  assert.match(C.responderPergunta('subiu?', {}).map((p) => p[0]).join(''), /^Ainda não há avaliações suficientes/);
 });
 
 test('issue: link do GitHub com repositório do app e dados técnicos', () => {
