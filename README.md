@@ -2,7 +2,7 @@
 
 Página para o dono dos apps ler as **avaliações** (estrelas), as **sugestões** e os **relatórios de erro** enviados por Câmbio, Cripto, Livro-Caixa, Taxômetro e Investimentos.
 
-- Dados: Firestore do projeto `systekna-feedback` (regras em `PACOTES/stk-pkg-doacao/firestore.rules`).
+- Dados: Firestore do projeto `systekna-feedback` (regras em `2. PACOTES/stk-pkt-doacao/firestore.rules`).
 - Duas visões: **Feedback** (avaliações e sugestões) e **Erros** (relatórios do `stk-pkg-erros.js`, agrupados pelo mesmo erro, com contador, filtros por status, app e versão, pilha, copiar, marcar como resolvido e excluir).
 - Login por e-mail e senha (Firebase Auth). Só a conta cujo UID está na função `dono()` das regras lê, marca como lida e apaga sugestões.
 - App Check com reCAPTCHA Enterprise (a mesma chave dos apps; domínio precisa estar na chave).
@@ -12,7 +12,7 @@ Página para o dono dos apps ler as **avaliações** (estrelas), as **sugestões
 
 ## Design Aero 3.0 (v1.3.0; "Pergunte ao painel" removido na v1.3.1)
 
-Segue o template `PACOTES/stk-pkg-design-system/painel-feedback-aero3.html`: vidro com espessura, céu e luzes ao fundo, fonte Open Sans (servida em `src/fonts/`, SIL OFL 1.1).
+Segue o template `2. PACOTES/stk-pkt-design-system/painel-feedback-aero3.html`: vidro com espessura, céu e luzes ao fundo, fonte Open Sans (servida em `src/fonts/`, SIL OFL 1.1).
 
 - **Modo:** claro → escuro → luz ambiente (segue a hora: amanhecer, dia, entardecer, noite). Fica salvo neste navegador (`painel-modo`).
 - **Ilha viva** no topo: mostra o que pede atenção agora (erro aberto nas últimas 24 h, depois sugestões novas).
@@ -23,7 +23,7 @@ Segue o template `PACOTES/stk-pkg-design-system/painel-feedback-aero3.html`: vid
 
 ## Cofre, PIN e biometria (v1.4.0)
 
-O painel abre pelo kit de segurança (`PACOTES/stk-pkg-security`), como os outros apps:
+O painel abre pelo kit de segurança (`2. PACOTES/stk-pkt-security`), como os outros apps:
 
 - **Abrir:** PIN FINANC (o mesmo dos apps no endereço `celsoalmeidalf.github.io`) ou biometria. Sem desbloquear, nada aparece.
 - **Entrar sozinho:** no primeiro login, com "Guardar e-mail e senha neste aparelho" marcado, a conta vai para o cofre (`secureStorage`, chave `painel:conta`), cifrado com AES-GCM por chave derivada do PIN (PBKDF2 600 mil) ou da biometria. Nos próximos desbloqueios o painel lê o cofre e entra no Firebase sem digitar nada.
@@ -58,7 +58,7 @@ src/painel-core.js  regras puras: resumo, filtros, CSV, datas, agrupamento de er
                     ilha e link de issue (testadas)
 src/painel.css      design Aero 3.0 (tokens claro/escuro/luz ambiente e componentes)
 src/fonts/          Open Sans variável + licença OFL
-src/stk-pkg-*       kit de segurança e ícones (cópias de PACOTES/stk-pkg-security; não editar aqui)
+src/stk-pkg-*       kit de segurança e ícones (cópias de 2. PACOTES/stk-pkt-security; não editar aqui)
 test/               node --test
 ```
 
@@ -71,4 +71,4 @@ cd src && python3 -m http.server 8780      # abrir http://localhost:8780 (localh
 
 Publicação: GitHub Pages pelo workflow `.github/workflows/static.yml` (pasta `src`).
 
-Versão atual: **1.6.1** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 27 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `PACOTES/stk-pkg-doacao`.
+Versão atual: **1.6.1** (`data-vault-version` no `index.html`), no ar só no DEV (`celsoalmeidalf.github.io/feedback-painel`). Situação em 09/10/2026: 27 testes passando. Para incluir um app novo, veja a lista de 4 lugares no README do `2. PACOTES/stk-pkt-doacao`.
