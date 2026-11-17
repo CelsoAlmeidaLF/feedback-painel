@@ -194,7 +194,7 @@
   }
 
   // ==========================================
-  // ERROS (relatórios técnicos do stk-pkg-erros.js)
+  // ERROS (relatórios técnicos do stk-pkt-erros.js)
   // ==========================================
   // Agrupa ocorrências pela assinatura (mesmo app + versão + mensagem + origem).
   // Um grupo está resolvido quando todas as ocorrências estão marcadas.
@@ -289,7 +289,7 @@
   }
 
   // ==========================================
-  // CONTA DO PAINEL GUARDADA NO COFRE (stk-pkg-secure-vault)
+  // CONTA DO PAINEL GUARDADA NO COFRE (stk-pkt-secure-vault)
   // ==========================================
   const CHAVE_CONTA = 'painel:conta';
   const emailOK = (e) => (new Suggestion({ email: e })).isEmailValid();

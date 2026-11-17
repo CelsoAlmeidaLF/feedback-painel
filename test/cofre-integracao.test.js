@@ -8,10 +8,10 @@ const html = ler('index.html'), app = ler('app.js');
 
 test('cofre: o painel abre pelo kit de segurança (PIN FINANC / biometria)', () => {
   assert.match(html, /<html[^>]*class="vault-locked"[^>]*data-vault-app="feedback-painel"/);
-  const ordem = ['stk-pkg-financ-icons.js', 'stk-pkg-secure-vault.js', 'stk-pkg-secure-ui.js', 'painel-core.js', 'app.js'].map((f) => html.indexOf(`src="${f}"`));
+  const ordem = ['stk-pkt-financ-icons.js', 'stk-pkt-secure-vault.js', 'stk-pkt-secure-ui.js', 'painel-core.js', 'app.js'].map((f) => html.indexOf(`src="${f}"`));
   assert.ok(ordem.every((i) => i > 0), 'todos os scripts presentes');
   assert.deepEqual([...ordem].sort((a, b) => a - b), ordem, 'kit antes do app');
-  assert.ok(html.indexOf('stk-pkg-secure-ui.css') < html.indexOf('painel.css'), 'o painel sobrescreve as cores do kit');
+  assert.ok(html.indexOf('stk-pkt-secure-ui.css') < html.indexOf('painel.css'), 'o painel sobrescreve as cores do kit');
   assert.match(html, /data-vault-profile-slot/, 'menu ⋮ no cabeçalho');
 });
 
