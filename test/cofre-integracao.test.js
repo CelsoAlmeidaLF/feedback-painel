@@ -4,11 +4,13 @@ const { readFileSync } = require('node:fs');
 const path = require('node:path');
 
 const ler = (f) => readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
-const html = ler('index.html'), app = ler('app.js');
+const html = ler('index.html');
+const entryScript = html.includes('src="program.js"') ? 'program.js' : html.includes('src="Program.js"') ? 'Program.js' : 'app.js';
+const app = ler(entryScript);
 
 test('cofre: o painel abre pelo kit de segurança (PIN FINANC / biometria)', () => {
   assert.match(html, /<html[^>]*class="vault-locked"[^>]*data-vault-app="feedback-painel"/);
-  const ordem = ['stk-pkt-financ-icons.js', 'stk-pkt-secure-vault.js', 'stk-pkt-secure-ui.js', 'painel-core.js', 'app.js'].map((f) => html.indexOf(`src="${f}"`));
+  const ordem = ['stk-pkt-financ-icons.js', 'stk-pkt-secure-vault.js', 'stk-pkt-secure-ui.js', 'painel-core.js', entryScript].map((f) => html.indexOf(`src="${f}"`));
   assert.ok(ordem.every((i) => i > 0), 'todos os scripts presentes');
   assert.deepEqual([...ordem].sort((a, b) => a - b), ordem, 'kit antes do app');
   assert.ok(html.indexOf('stk-pkt-secure-ui.css') < html.indexOf('painel.css'), 'o painel sobrescreve as cores do kit');
