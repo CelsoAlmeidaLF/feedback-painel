@@ -44,11 +44,16 @@
         LIVROCAIXA: 'Livro-Caixa',
         TAXOMETRO: 'Taxômetro',
         INVEST: 'Investimentos',
+        FORCA: 'Fit Força',
+        SMART: 'Fit Smart',
+        AGENDA: 'Studio Agenda',
+        MULTICM: 'BarGestão (Multi-CM)',
+        BARGESTAO: 'BarGestão',
         DESPESAS: 'Despesas da Casa',
         LAUNCHER: 'Meus Apps'
       };
       this._tipos = { sugestao: 'Sugestão', problema: 'Problema', elogio: 'Elogio' };
-      this._principais = ['CAMBIO', 'CRIPTO', 'LIVROCAIXA', 'TAXOMETRO', 'INVEST'];
+      this._principais = ['CAMBIO', 'CRIPTO', 'LIVROCAIXA', 'TAXOMETRO', 'INVEST', 'FORCA', 'SMART', 'AGENDA', 'MULTICM'];
     }
 
     get apps() { return this._apps; }
@@ -271,7 +276,18 @@
   }
 
   // Link para abrir issue no GitHub com os dados técnicos do grupo de erros.
-  const REPOS = { CAMBIO: 'CelsoAlmeidaLF/cambio-sim', CRIPTO: 'CelsoAlmeidaLF/cripto-sim', LIVROCAIXA: 'CelsoAlmeidaLF/gerenc-fin', TAXOMETRO: 'CelsoAlmeidaLF/taxometro', INVEST: 'CelsoAlmeidaLF/invest-sim' };
+  const REPOS = {
+    CAMBIO: 'CelsoAlmeidaLF/cambio-sim',
+    CRIPTO: 'CelsoAlmeidaLF/cripto-sim',
+    LIVROCAIXA: 'CelsoAlmeidaLF/gerenc-fin',
+    TAXOMETRO: 'CelsoAlmeidaLF/taxometro',
+    INVEST: 'CelsoAlmeidaLF/invest-sim',
+    FORCA: 'CelsoAlmeidaLF/fit-force',
+    SMART: 'CelsoAlmeidaLF/fit-smart',
+    AGENDA: 'CelsoAlmeidaLF/studio-agenda-completo',
+    MULTICM: 'CelsoAlmeidaLF/multi-cm',
+    BARGESTAO: 'CelsoAlmeidaLF/multi-cm'
+  };
   const TIPO_ERRO = { erro: 'Erro', promessa: 'Promessa', console: 'Console' };
   function linkIssue(g) {
     const nome = service._dictionary.getNomeApp(g.app);

@@ -1,7 +1,7 @@
 /* Painel de feedback · service worker (mesmo modelo do Finanças da Casa). Troque CACHE_NAME a cada versão (igual ao data-vault-version). */
 const CACHE_NAME = 'feedback-painel-v1.6.2';
 const APP_SHELL = [
-  './', './index.html', './painel.css', './painel-core.js', './app.js', './manifest.json',
+  './', './index.html', './painel.css', './painel-core.js', './program.js', './Program.js', './app.js', './manifest.json',
   './stk-pkt-secure-vault.js', './stk-pkt-secure-ui.js', './stk-pkt-secure-ui.css', './stk-pkt-financ-icons.js',
   './fonts/fonts.css', './fonts/open-sans.woff2',
   './icon-192.png?v=2', './icon-512.png?v=2', './icon-maskable-192.png?v=2', './icon-maskable-512.png?v=2',
